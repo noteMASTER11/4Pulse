@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4Pulse — Политика конфиденциальности</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         max-width: 800px; margin: 40px auto; padding: 0 20px; line-height: 1.7;
+         color: #222; }
+  h1 { font-size: 24px; } h2 { font-size: 18px; margin-top: 32px; }
+  p { margin: 8px 0; } ul { padding-left: 20px; }
+  .updated { color: #666; font-size: 14px; }
+</style>
+</head>
+<body>
+<h1>Политика конфиденциальности — 4Pulse</h1>
+<p class="updated">Последнее обновление: апрель 2026</p>
+
+<h2>1. Какие данные обрабатываются</h2>
+<p>Расширение 4Pulse работает исключительно с данными форума 4pda.to и обрабатывает следующую информацию:</p>
+<ul>
+  <li><strong>Куки сессии</strong> (member_id, pass_hash) — используются только для установления соединения с сервером 4pda.to и проверки авторизации. Куки читаются через Chrome Cookies API и не копируются, не передаются и не хранятся за пределами браузера.</li>
+  <li><strong>Данные форума</strong> (темы, сообщения, счётчики) — загружаются с серверов 4pda.to и временно хранятся в локальном хранилище браузера (chrome.storage.local) для отображения в интерфейсе расширения.</li>
+  <li><strong>Настройки пользователя</strong> (тема оформления, звуки, интервалы) — хранятся только локально в браузере через chrome.storage.local.</li>
+</ul>
+
+<h2>2. Что расширение НЕ делает</h2>
+<ul>
+  <li>Не передаёт никакие данные разработчику расширения или третьим лицам</li>
+  <li>Не имеет собственного сервера для сбора данных</li>
+  <li>Не отслеживает историю просмотров и не читает содержимое других сайтов</li>
+  <li>Не использует аналитику, рекламные SDK или трекеры</li>
+  <li>Не хранит пароли или платёжные данные</li>
+</ul>
+
+<h2>3. Сетевые соединения</h2>
+<p>Расширение устанавливает соединения исключительно со следующими серверами:</p>
+<ul>
+  <li><strong>4pda.to</strong> и <strong>*.4pda.to</strong> — основные серверы форума для получения уведомлений</li>
+  <li><strong>itunes.apple.com</strong>, <strong>musicbrainz.org</strong>, <strong>coverartarchive.org</strong> — только при использовании функции встроенного радио, для получения обложек треков</li>
+  <li><strong>de1.api.radio-browser.info</strong> — только при использовании встроенного радио, для поиска радиостанций</li>
+  <li><strong>fonts.googleapis.com</strong>, <strong>fonts.gstatic.com</strong> — загрузка шрифта интерфейса</li>
+</ul>
+
+<h2>4. Хранение данных</h2>
+<p>Все данные хранятся локально в браузере пользователя с использованием стандартного API chrome.storage.local. Данные не покидают устройство пользователя.</p>
+
+<h2>5. Контакт</h2>
+<p>По вопросам конфиденциальности: страница расширения на форуме 4pda.to или через механизм обратной связи Chrome Web Store.</p>
+
+<hr>
+<h2>Privacy Policy — 4Pulse (English)</h2>
+<p class="updated">Last updated: April 2026</p>
+
+<h2>1. Data processed</h2>
+<p>4Pulse extension works exclusively with 4pda.to forum data and processes:</p>
+<ul>
+  <li><strong>Session cookies</strong> (member_id, pass_hash) — used only to establish a connection with 4pda.to and verify authentication. Cookies are read via the Chrome Cookies API and are never copied, transmitted, or stored outside the browser.</li>
+  <li><strong>Forum data</strong> (topics, messages, counters) — loaded from 4pda.to servers and temporarily stored in browser local storage (chrome.storage.local) for display in the extension interface.</li>
+  <li><strong>User settings</strong> (theme, sounds, intervals) — stored only locally in the browser via chrome.storage.local.</li>
+</ul>
+
+<h2>2. What the extension does NOT do</h2>
+<ul>
+  <li>Does not transmit any data to the extension developer or third parties</li>
+  <li>Has no proprietary server for data collection</li>
+  <li>Does not track browsing history or read content from other websites</li>
+  <li>Does not use analytics, advertising SDKs, or trackers</li>
+  <li>Does not store passwords or payment information</li>
+</ul>
+
+<h2>3. Network connections</h2>
+<p>The extension connects exclusively to:</p>
+<ul>
+  <li><strong>4pda.to</strong> and <strong>*.4pda.to</strong> — main forum servers for notifications</li>
+  <li><strong>itunes.apple.com</strong>, <strong>musicbrainz.org</strong>, <strong>coverartarchive.org</strong> — only when using the built-in radio feature, to fetch track artwork</li>
+  <li><strong>de1.api.radio-browser.info</strong> — only when using built-in radio, to search for stations</li>
+  <li><strong>fonts.googleapis.com</strong>, <strong>fonts.gstatic.com</strong> — loading interface font</li>
+</ul>
+
+<h2>4. Data storage</h2>
+<p>All data is stored locally in the user's browser using the standard chrome.storage.local API. Data never leaves the user's device.</p>
+
+<h2>5. Contact</h2>
+<p>For privacy questions: extension page on 4pda.to forum or via Chrome Web Store feedback.</p>
+</body>
+</html>
