@@ -1,0 +1,11 @@
+{
+  "name": "4pulse",
+  "version": "1.9.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs all",
+    "build:firefox": "node scripts/build.mjs firefox",
+    "build:chrome": "node scripts/build.mjs chrome"
+  }
+}

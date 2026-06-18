@@ -1,0 +1,113 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "Cookie",
+          "operation": "remove"
+        },
+        {
+          "header": "Authorization",
+          "operation": "remove"
+        }
+      ],
+      "responseHeaders": [
+        {
+          "header": "Set-Cookie",
+          "operation": "remove"
+        },
+        {
+          "header": "Set-Cookie2",
+          "operation": "remove"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||hostingradio.ru/",
+      "resourceTypes": [
+        "main_frame",
+        "sub_frame",
+        "xmlhttprequest",
+        "media",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 2,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "Cookie",
+          "operation": "remove"
+        },
+        {
+          "header": "Authorization",
+          "operation": "remove"
+        }
+      ],
+      "responseHeaders": [
+        {
+          "header": "Set-Cookie",
+          "operation": "remove"
+        },
+        {
+          "header": "Set-Cookie2",
+          "operation": "remove"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||kartina.tv/",
+      "resourceTypes": [
+        "main_frame",
+        "sub_frame",
+        "xmlhttprequest",
+        "media",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 3,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "Cookie",
+          "operation": "remove"
+        },
+        {
+          "header": "Authorization",
+          "operation": "remove"
+        }
+      ],
+      "responseHeaders": [
+        {
+          "header": "Set-Cookie",
+          "operation": "remove"
+        },
+        {
+          "header": "Set-Cookie2",
+          "operation": "remove"
+        }
+      ]
+    },
+    "condition": {
+      "regexFilter": "^https?://(icecast-vgtrk\\.cdnvideo\\.ru|icecast\\.luxfm\\.kz|icecast\\.ns\\.kz|online\\.hitfm\\.ua|online\\.kissfm\\.ua|online\\.radioroks\\.ua)/.*",
+      "resourceTypes": [
+        "main_frame",
+        "sub_frame",
+        "xmlhttprequest",
+        "media",
+        "other"
+      ]
+    }
+  }
+]

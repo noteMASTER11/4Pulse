@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4Pulse</title>
+    <link rel="stylesheet" href="popup.css">
+    <style>
+        /* =====================================================
+           SIDEBAR-SPECIFIC OVERRIDES
+           Sidebar is wider, taller — адаптируем layout
+           ===================================================== */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            width: 100% !important;
+            height: 100% !important;
+            min-width: 375px;
+            display: flex;
+            flex-direction: column;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            font-size: 13px;
+        }
+
+        /* Header — compact для sidebar */
+        header {
+            flex-shrink: 0;
+            padding: 16px 9px 13px !important;
+        }
+
+        .header-top {
+            margin-bottom: 8px !important;
+        }
+
+        /* Main растягивается на всю высоту */
+        main {
+            flex: 1 1 0;
+            overflow-y: auto !important;
+            overflow-x: hidden;
+            min-height: 0;
+            /* Снимаем ограничение высоты — в сайдбаре скролл всегда по месту */
+            max-height: none !important;
+        }
+
+        /* Скроллбар сайдбара — тонкий Firefox Dark */
+        main::-webkit-scrollbar { width: 3px; }
+        main::-webkit-scrollbar-track { background: transparent; }
+        main::-webkit-scrollbar-thumb {
+            background: var(--scrollbar-thumb, rgba(255,255,255,0.18));
+            border-radius: 3px;
+        }
+        main {
+            scrollbar-width: thin;
+            scrollbar-color: var(--scrollbar-thumb, rgba(255,255,255,0.18)) transparent;
+        }
+
+        /* Убираем min-height у списков — sidebar сам управляет высотой */
+        #topic-list, #qms-list, #mentions-list {
+            min-height: 0 !important;
+        }
+
+        /* Карточки чуть компактнее в sidebar */
+        .topic-card {
+            padding: 8px 10px !important;
+        }
+
+        /* Статистика — адаптивная ширина */
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+        }
+
+        /* ── Компактная статистика — flexbox, один ряд гарантированно ── */
+        body.compact-stats-mode .stats-cards {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            gap: 2px !important;
+        }
+        /* Плитки — только иконка + цифра, без фона */
+        body.compact-stats-mode .stats-cards .stat-card {
+            flex: 1 1 0 !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 2px 4px !important;
+            justify-content: center !important;
+            gap: 3px !important;
+            min-width: 0 !important;
+            border-radius: var(--radius-sm) !important;
+            transition: background var(--t-normal) !important;
+        }
+        body.compact-stats-mode .stats-cards .stat-card:hover {
+            background: var(--stat-tile-bg) !important;
+        }
+        body.compact-stats-mode .stats-cards .stat-card.active {
+            background: var(--stat-tile-bg) !important;
+        }
+        body.compact-stats-mode .stats-cards .stat-card .stat-icon {
+            width: 11px !important; height: 11px !important;
+        }
+        body.compact-stats-mode .stats-cards .stat-card .stat-number {
+            font-size: 11px !important;
+            font-weight: 700 !important;
+        }
+
+        /* Плитки — горизонтальный ряд: иконка + цифра */
+        .stat-card {
+            display: flex;
+            flex-direction: row !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            gap: 7px !important;
+            padding: 7px 10px !important;
+        }
+        .stat-label { display: none !important; }
+        .stat-number { font-size: 18px !important; font-weight: 800 !important; }
+        .stat-icon   { width: 18px !important; height: 18px !important; flex-shrink: 0; }
+
+        /* Кнопки действий */
+        .action-buttons {
+            display: flex;
+            gap: 4px;
+            padding: 0 2px;
+        }
+        .action-btn {
+            flex: 1;
+            font-size: 11px;
+        }
+        .btn-icon { width: 12px !important; height: 12px !important; }
+
+        /* ── Drag & drop плиток статистики ── */
+        .stat-card[draggable="true"] { cursor: grab; }
+        .stat-card[draggable="true"]:active { cursor: grabbing; }
+        .stat-card.drag-source { opacity: 0.4; transform: scale(0.96); }
+        .stat-card.drag-over {
+            outline: 2px solid var(--accent);
+            outline-offset: -2px;
+            background: var(--accent-soft) !important;
+        }
+
+        /* Sidebar header — убираем часы (мало места) на узких окнах */
+        @media (max-width: 280px) {
+            .header-time { display: none !important; }
+            /* compact-stats-mode уже flex — не трогаем */
+            body:not(.compact-stats-mode) .stats-cards { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        /* Sidebar refresh spinner */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
+        .refresh-btn.spinning .icon { animation: spin 1s linear infinite; }
+
+        .refresh-btn,
+        .settings-btn {
+            width: 18px !important;
+            height: 18px !important;
+        }
+        .compact-toggle {
+            width: 18px !important;
+            height: 18px !important;
+        }
+        .header-actions {
+            margin-right: -2px;
+        }
+        .header-actions .icon {
+            width: 16px !important;
+            height: 16px !important;
+        }
+
+        .header-time {
+            display: flex;
+            flex-direction: row;
+            align-items: baseline;
+            gap: 5px;
+        }
+        .time-clock {
+            font-size: 12px !important;
+        }
+        .time-date {
+            font-size: 12px !important;
+            white-space: nowrap !important;
+        }
+        .stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: var(--space-sm);
+        }
+        .stats-header .stats-title {
+            margin-bottom: 0 !important;
+        }
+
+        /* Empty state в sidebar — без фиксированной высоты */
+        .empty-state {
+            padding: 32px 16px !important;
+        }
+
+        /* Полноразмерный скелетон */
+        #loading-skeleton { padding: 8px 0; }
+
+        /* Sidebar title bar */
+        .sidebar-title {
+            display: none; /* убрано — Firefox сам показывает название панели */
+        }
+
+        /* ── Action icons: better contrast in sidebar ────────── */
+        /* popup.css uses var(--text-3) which can be near-white in glass themes */
+        .card-actions .action-icon {
+            color: var(--text-2) !important;
+            opacity: 0.55;
+            transition: opacity 0.15s, color 0.15s, background 0.15s, transform 0.15s;
+        }
+        .topic-card:hover .card-actions .action-icon {
+            opacity: 1;
+        }
+        .card-actions .action-icon:hover {
+            opacity: 1;
+            transform: scale(1.15);
+        }
+        /* Focus button — orange when active */
+        .topic-card.focused .card-actions .topic-focus-btn {
+            color: #f97316 !important;
+            opacity: 1 !important;
+        }
+        .card-actions .topic-focus-btn:hover {
+            color: #f97316 !important;
+            background: rgba(249,115,22,0.12) !important;
+        }
+        /* Mute button — red when active */
+        .topic-card.muted .card-actions .topic-mute-btn {
+            color: #ef4444 !important;
+            opacity: 1 !important;
+        }
+        .card-actions .topic-mute-btn:hover {
+            color: #ef4444 !important;
+            background: rgba(239,68,68,0.12) !important;
+        }
+        /* Mark-read button */
+        .card-actions .mark-read:hover {
+            color: var(--accent) !important;
+            background: var(--accent-soft) !important;
+        }
+        /* Open-tab button — same muted style, blue on hover */
+        .card-actions .open-tab {
+            color: var(--text-2) !important;
+            opacity: 0.55 !important;
+        }
+        .card-actions .open-tab:hover {
+            color: var(--accent) !important;
+            background: var(--accent-soft) !important;
+            opacity: 1 !important;
+        }
+
+        /* ── Inline QMS Chat (sidebar) ─────────────────────── */
+        :root { --chat-accent: #2982cc; }
+        [data-accent="purple"] { --chat-accent: #8e44ad; }
+        [data-accent="blue"]   { --chat-accent: #2982cc; }
+        [data-accent="teal"]   { --chat-accent: #16a085; }
+        [data-accent="orange"] { --chat-accent: #e67e22; }
+        [data-accent="red"]    { --chat-accent: #e74c3c; }
+        [data-accent="pink"]   { --chat-accent: #e84393; }
+
+        .qms-inline-chat {
+            margin-top: 8px; padding-top: 8px;
+            border-top: 1px solid var(--border, #eee);
+            display: flex; flex-direction: column; gap: 6px;
+            cursor: default;
+        }
+        .qms-history {
+            max-height: 180px; overflow-y: auto;
+            font-size: 12px;
+            background: var(--bg-secondary, rgba(128,128,128,0.06));
+            border: 1px solid var(--border, rgba(128,128,128,0.2));
+            border-radius: 6px; padding: 8px;
+            display: flex; flex-direction: column; gap: 5px;
+        }
+        .qms-history::-webkit-scrollbar { width: 4px; }
+        .qms-history::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.4); border-radius: 4px; }
+        .qms-msg { padding: 5px 9px; border-radius: 8px; max-width: 90%; word-break: break-word; line-height: 1.4; font-size: 12px; }
+        .qms-msg.in  { background: rgba(128,128,128,0.14); border: 1px solid var(--border,rgba(128,128,128,0.18)); align-self: flex-start; border-bottom-left-radius: 2px; }
+        .qms-msg.out { background: var(--chat-accent); color: #fff !important; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .qms-msg * { color: inherit !important; background: transparent !important; }
+
+        /* Smile-only QMS messages: keep forum smileys clean, without chat bubble fill */
+        .qms-msg.qms-msg-smileys-only {
+            background: transparent !important;
+            border: 0 !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
+            line-height: 1 !important;
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            min-height: 0;
+        }
+        .qms-msg.qms-msg-smileys-only .qms-inline-pda-smiley {
+            margin: 0;
+        }
+        .qms-loading-text { text-align: center; color: #888; font-size: 11px; padding: 8px; }
+        .qms-reply-form { display: flex; flex-direction: column; gap: 5px; }
+        .qms-textarea {
+            width: 100%; min-height: 52px; max-height: 100px; resize: vertical;
+            padding: 6px 8px; border: 1px solid var(--border,#ccc); border-radius: 5px;
+            font-family: inherit; font-size: 12px; background: transparent; color: inherit; box-sizing: border-box;
+        }
+        .qms-textarea:focus { outline: none; border-color: var(--chat-accent); }
+        .qms-reply-actions { display: flex; gap: 5px; justify-content: flex-end; }
+        .qms-reply-actions button {
+            padding: 4px 10px; border: none; border-radius: 4px;
+            font-size: 11px; font-weight: 500; cursor: pointer;
+            background: var(--bg-2, rgba(128,128,128,0.18)); color: var(--text, #fff);
+        }
+        .qms-reply-actions .qms-btn-send { background: var(--chat-accent); color: #fff; }
+        .qms-reply-actions .qms-btn-send:hover { filter: brightness(0.9); }
+        .qms-reply-actions button:hover:not(.qms-btn-send) { filter: brightness(0.85); }
+        .qms-reply-actions button:disabled { opacity: 0.6; cursor: not-allowed; }
+        /* Base style for QMS chat buttons */
+        .qms-btn {
+            padding: 4px 10px; border: none; border-radius: 4px;
+            font-size: 11px; font-weight: 500; cursor: pointer;
+            background: var(--bg-2, rgba(128,128,128,0.18)); color: var(--text, #fff);
+            display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+            white-space: nowrap; transition: background 0.15s;
+        }
+        .qms-btn.qms-btn-send { background: var(--chat-accent) !important; color: #fff !important; }
+        .qms-btn.qms-btn-send:hover { filter: brightness(0.9); }
+        .qms-btn:hover:not(.qms-btn-send) { filter: brightness(0.85); }
+        .qms-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        /* Keep card-actions visible when inline chat is open */
+        .topic-card:has(.qms-inline-chat:not(.hidden)) .card-actions { opacity: 1; }
+        .qms-emoji-picker {
+            padding: 6px; background: rgba(128,128,128,0.06);
+            border: 1px solid rgba(128,128,128,0.18); border-radius: 5px;
+            display: grid; grid-template-columns: repeat(8,1fr); gap: 4px;
+            max-height: 100px; overflow-y: auto;
+        }
+        .qms-emoji-picker::-webkit-scrollbar { width: 3px; }
+        .qms-emoji-picker::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.4); border-radius: 4px; }
+        .qms-emoji-item { cursor: pointer; text-align: center; font-size: 16px; user-select: none; transition: transform 0.1s; }
+        .qms-emoji-item:hover { transform: scale(1.3); }
+
+
+        /* Native 4PDA smileys picker */
+
+        .qms-inline-pda-smiley {
+            display: inline-block;
+            width: auto;
+            height: 20px;
+            max-width: 42px;
+            margin: 0 1px;
+            vertical-align: middle;
+            object-fit: contain;
+            background: transparent !important;
+        }
+        body.compact-mode .qms-inline-pda-smiley {
+            height: 18px;
+            max-width: 38px;
+        }
+
+        .qms-pda-smileys-picker {
+            grid-template-columns: repeat(8, minmax(28px, 1fr));
+            align-items: center;
+        }
+        .qms-pda-smiley-item {
+            appearance: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 30px;
+            padding: 3px;
+            border: 1px solid rgba(128, 128, 128, 0.16);
+            border-radius: 6px;
+            background: rgba(128, 128, 128, 0.06);
+            cursor: pointer;
+            line-height: 1;
+        }
+        .qms-pda-smiley-item:hover {
+            background: rgba(128, 128, 128, 0.16);
+            transform: translateY(-1px) scale(1.08);
+        }
+        .qms-pda-smiley-img {
+            display: block;
+            width: auto;
+            height: 22px;
+            max-width: 28px;
+            object-fit: contain;
+            image-rendering: auto;
+        }
+        .qms-pda-smileys-note {
+            grid-column: 1 / -1;
+            padding: 8px 6px;
+            text-align: center;
+            font-size: 11px;
+            line-height: 1.35;
+            opacity: 0.82;
+        }
+        body.compact-mode .qms-pda-smiley-img {
+            height: 19px;
+            max-width: 24px;
+        }
+        body.compact-mode .qms-pda-smiley-item {
+            min-height: 26px;
+        }
+
+        /* ════════════════════════════════════
+           🌌 COSMIC PULSE — sidebar QMS chat
+           ════════════════════════════════════ */
+        body[data-theme="cosmic"] .qms-history {
+            background: rgba(4,12,26,0.55);
+            backdrop-filter: blur(14px) saturate(180%);
+            -webkit-backdrop-filter: blur(14px) saturate(180%);
+            border: 1px solid rgba(0,242,254,0.16);
+        }
+        body[data-theme="cosmic"] .qms-history::-webkit-scrollbar { width: 3px; }
+        body[data-theme="cosmic"] .qms-history::-webkit-scrollbar-thumb { background: #00f2fe; border-radius: 4px; }
+        body[data-theme="cosmic"] .qms-msg.in {
+            background: rgba(0,242,254,0.07);
+            border-color: rgba(0,242,254,0.18);
+        }
+        body[data-theme="cosmic"] .qms-textarea {
+            background: rgba(4,12,26,0.60) !important;
+            color: #fff !important;
+            border: 1px solid rgba(0,242,254,0.22) !important;
+            caret-color: #00f2fe;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        body[data-theme="cosmic"] .qms-textarea::placeholder { color: rgba(161,255,206,0.45); }
+        body[data-theme="cosmic"] .qms-textarea:focus {
+            border-color: #00f2fe !important;
+            box-shadow: 0 0 8px rgba(0,242,254,0.25) !important;
+        }
+        body[data-theme="cosmic"] .qms-emoji-picker {
+            background: rgba(4,12,26,0.70);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(0,242,254,0.18);
+        }
+        body[data-theme="cosmic"] .qms-reply-actions button {
+            background: rgba(0,242,254,0.10) !important;
+            color: #a1ffce !important;
+            border: 1px solid rgba(0,242,254,0.22) !important;
+            transition: background 0.18s ease, border-color 0.18s ease,
+                        box-shadow 0.18s ease, color 0.18s ease, transform 0.12s ease;
+        }
+        body[data-theme="cosmic"] .qms-reply-actions button:hover:not(.qms-btn-send):not(:disabled) {
+            background: rgba(0,242,254,0.18) !important;
+            border-color: #00f2fe !important;
+            color: #fff !important;
+            box-shadow: 0 0 8px rgba(0,242,254,0.28);
+            transform: translateY(-1px);
+            filter: none !important;
+        }
+        body[data-theme="cosmic"] .qms-reply-actions .qms-btn-send {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
+            color: #000d1a !important;
+            border: none !important;
+            font-weight: 600;
+            box-shadow: 0 0 10px rgba(0,242,254,0.30);
+        }
+        body[data-theme="cosmic"] .qms-reply-actions .qms-btn-send:hover:not(:disabled) {
+            box-shadow: 0 0 18px rgba(0,242,254,0.55);
+            transform: translateY(-1px);
+            filter: brightness(1.08) !important;
+        }
+        /* 🎫 Ticket styles */
+        .ticket-card-inner {
+            padding: 10px 12px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            width: 100%;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        .ticket-row-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            min-height: 18px;
+        }
+        .ticket-row-meta {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .ticket-row-meta:empty { display: none; }
+        .ticket-section-tag {
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: .3px;
+            background: var(--bg-2);
+            color: var(--text-2);
+            padding: 2px 7px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 180px;
+        }
+        .ticket-responsible {
+            font-size: 10px;
+            color: var(--text-3);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .ticket-title {
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1.35;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text);
+        }
+        .ticket-snippet {
+            font-size: 11px;
+            color: var(--text-3);
+            line-height: 1.4;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+        .ticket-actions {
+            display: flex;
+            gap: 4px;
+            margin-top: 3px;
+        }
+        .ticket-btn {
+            flex: 1;
+            font-size: 10.5px;
+            font-weight: 500;
+            padding: 5px 4px;
+            border-radius: 6px;
+            cursor: pointer;
+            white-space: nowrap;
+            text-align: center;
+            transition: opacity .15s, background .15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            min-width: 0;
+            overflow: hidden;
+        }
+        .ticket-btn:hover  { opacity: .85; }
+        .ticket-btn:active { opacity: .65; }
+        .ticket-btn-open  {
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+            color: var(--text);
+        }
+        .ticket-btn-wip   {
+            border: none;
+            background: var(--accent);
+            color: #fff;
+        }
+        .ticket-btn-done  {
+            border: 1px solid #22c55e44;
+            background: #22c55e18;
+            color: #16a34a;
+        }
+        body[data-theme="dark"] .ticket-btn-done,
+        body[data-theme="liquid-glass"] .ticket-btn-done {
+            border-color: #22c55e33;
+            background: #22c55e15;
+            color: #4ade80;
+        }
+        .ticket-time {
+            font-size: 10px;
+            color: var(--text-3);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .ticket-status {
+            display: inline-block;
+            padding: 2px 7px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 600;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .ticket-status-new  { background: #fee2e2; color: #b91c1c; }
+        .ticket-status-wip  { background: #fef3c7; color: #92400e; }
+        .ticket-status-done { background: #d1fae5; color: #065f46; }
+        body.dark .ticket-status-new  { background: #7f1d1d; color: #fca5a5; }
+        body.dark .ticket-status-wip  { background: #78350f; color: #fcd34d; }
+        body.dark .ticket-status-done { background: #064e3b; color: #6ee7b7; }
+        .ticket-viewed { opacity: 0.65; }
+
+        /* 🌌 COSMIC: Lock accent to cyan — beat all data-accent variants */
+        body[data-theme="cosmic"][data-accent],
+        body[data-theme="cosmic"][data-accent="blue"],
+        body[data-theme="cosmic"][data-accent="teal"],
+        body[data-theme="cosmic"][data-accent="purple"],
+        body[data-theme="cosmic"][data-accent="orange"] {
+            --accent:             #00f2fe !important;
+            --accent-rgb:         0,242,254 !important;
+            --accent-glow:        rgba(0,242,254,0.40) !important;
+            --accent-soft:        rgba(0,242,254,0.14) !important;
+            --theme-accent:       #00c8d4 !important;
+            --theme-accent-light: rgba(0,242,254,0.12) !important;
+            --theme-accent-hover: #00e0ec !important;
+        }
+        /* Stat tile active: glass, not solid fill */
+        body[data-theme="cosmic"] .stat-tile.active {
+            background: rgba(0,242,254,0.12) !important;
+            backdrop-filter: blur(16px) saturate(190%);
+            -webkit-backdrop-filter: blur(16px) saturate(190%);
+            border-color: #00f2fe !important;
+            box-shadow: 0 0 20px rgba(0,242,254,0.30), inset 0 1px 0 rgba(0,242,254,0.18) !important;
+        }
+        /* Action buttons hover: glass glow */
+        body[data-theme="cosmic"] .action-btn:hover {
+            background: rgba(0,242,254,0.13) !important;
+            border-color: #00f2fe !important;
+            color: #fff !important;
+            box-shadow: 0 0 14px rgba(0,242,254,0.32) !important;
+            transform: translateY(-1px);
+        }
+    .user-avatar.loaded{box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 40%,transparent),0 0 18px color-mix(in srgb,var(--accent) 22%,transparent);}
+
+
+        /* 🪞 Mirror mode — parity with popup */
+        body.mirror-mode .stats-cards { direction: rtl; }
+        body.mirror-mode .stat-card { direction: ltr; }
+        body.mirror-mode .action-buttons { flex-direction: row-reverse !important; }
+        body.mirror-mode .topic-card { flex-direction: row-reverse; }
+        body.mirror-mode .topic-card .card-body { text-align: right; align-items: flex-end; }
+        body.mirror-mode .topic-card .topic-meta { flex-direction: row-reverse; }
+        body.mirror-mode .topic-card .topic-author { flex-direction: row-reverse; }
+        body.mirror-mode .topic-card .unread-badge { margin-left: 0; margin-right: auto; }
+        body.mirror-mode .topic-card.unread { border-left: none !important; border-right: 2.5px solid var(--accent) !important; }
+        body.mirror-mode .topic-card.pinned { border-left: none !important; border-right: 2.5px solid var(--accent) !important; }
+        #mirror-toggle { opacity: 0.5; transition: opacity 0.2s; }
+        #mirror-toggle.active { opacity: 1; }
+        #mirror-toggle.active svg {
+            color: var(--accent) !important;
+            opacity: 1 !important;
+            filter: drop-shadow(0 0 4px var(--accent-glow, var(--accent)));
+        }
+
+        /* 4Pulse 1.8.9: optional quick-action buttons in topic cards */
+        body.hide-topic-action-buttons .topic-card .card-actions,
+        body[data-user-profile="minimal"] .topic-card .card-actions {
+            display: none !important;
+        }
+</style>
+</head>
+<body data-theme="dark">
+    <!-- SVG sprite (копия из popup.html) -->
+    <div style="display:none;">
+        <svg xmlns="http://www.w3.org/2000/svg">
+          <symbol id="icon-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="8" r="5"></circle><path d="M20 21a8 8 0 1 0-16 0"></path>
+          </symbol>
+          <symbol id="icon-message" viewBox="0 0 24 24" fill="currentColor">
+            <!-- Chat bubble body -->
+            <path d="M20 2H4C2.9 2 2 2.9 2 4v13c0 1.1.9 2 2 2h10.5l3.8 3.8c.2.2.5.1.6-.1.1-.2.1-.3.1-.5V19h1c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" fill="currentColor"/>
+            <!-- Dots as separate elements with class for CSS targeting -->
+            <circle class="qms-dot" cx="8" cy="10.5" r="1.3"/>
+            <circle class="qms-dot" cx="12" cy="10.5" r="1.3"/>
+            <circle class="qms-dot" cx="16" cy="10.5" r="1.3"/>
+          </symbol>
+          <symbol id="icon-star" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+          </symbol>
+          <symbol id="icon-at" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="4"></circle><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"></path>
+          </symbol>
+          <symbol id="icon-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"></path>
+          </symbol>
+          <symbol id="icon-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </symbol>
+          <symbol id="icon-folder-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v11z"></path>
+            <path d="M2 9h20"></path>
+          </symbol>
+          <symbol id="icon-pin" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+            <path d="M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"></path>
+          </symbol>
+          <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </symbol>
+          <symbol id="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </symbol>
+          <symbol id="icon-file-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </symbol>
+          <symbol id="icon-smile" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+            <line x1="9" y1="9" x2="9.01" y2="9"></line>
+            <line x1="15" y1="9" x2="15.01" y2="9"></line>
+          </symbol>
+
+          <symbol id="icon-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </symbol>
+
+          <symbol id="icon-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <circle cx="12" cy="12" r="6"></circle>
+            <circle cx="12" cy="12" r="2"></circle>
+          </symbol>
+          <symbol id="icon-bookmark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+          </symbol>
+          <symbol id="icon-ticket" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+            <path d="M2 9a1 1 0 0 1 1-1h18a1 1 0 0 1 1 1v2a2 2 0 0 0 0 4v2a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-2a2 2 0 0 0 0-4V9z"/>
+          </symbol>
+          <symbol id="icon-sort-date" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/>
+          </symbol>
+          <symbol id="icon-sort-az" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="6" x2="11" y2="6"/><line x1="4" y1="12" x2="11" y2="12"/>
+            <line x1="4" y1="18" x2="13" y2="18"/>
+            <polyline points="15 9 18 4 21 9"/><polyline points="15 15 18 20 21 15"/>
+          </symbol>
+          <symbol id="icon-sort-unread" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            <circle cx="19" cy="5" r="3" fill="currentColor" stroke="none"/>
+          </symbol>
+          <symbol id="icon-sort-group" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            <line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="17" x2="13" y2="17"/>
+          </symbol>
+        </svg>
+    </div>
+
+    <!-- ═══════ HEADER (same as popup) ═══════ -->
+    <header>
+        <div class="header-top">
+            <div id="user-name" class="user-info interactive" title="Открыть профиль">
+                <img class="user-avatar" id="user-avatar" src="" alt="" style="display:none;">
+                <svg class="icon user-icon-fallback"><use href="#icon-user"></use></svg>
+                <span class="user-name-text">@username</span>
+            </div>
+            <div class="header-actions">
+                <button id="mirror-toggle" class="compact-toggle interactive" title="Зеркальное отображение плиток">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="3" x2="12" y2="21"/>
+                        <polyline points="7 8 3 12 7 16"/>
+                        <polyline points="17 8 21 12 17 16"/>
+                    </svg>
+                </button>
+                <button id="command-palette-toggle" class="compact-toggle interactive" title="Командная панель (Ctrl/⌘+K)"><span style="font-weight:800;font-size:12px;line-height:1">⌘K</span></button>
+                <button id="compact-toggle" class="compact-toggle interactive" title="Компактный режим">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                        <line x1="3" y1="9" x2="21" y2="9"></line>
+                        <line x1="3" y1="15" x2="21" y2="15"></line>
+                    </svg>
+                </button>
+                <div id="refresh" class="refresh-btn interactive" title="Обновить">
+                    <svg class="icon"><use href="#icon-refresh"></use></svg>
+                </div>
+                <div id="options" class="settings-btn interactive" title="Настройки">
+                    <svg class="icon"><use href="#icon-settings"></use></svg>
+                </div>
+            </div>
+        </div>
+        <div class="stats-container">
+            <div class="stats-header">
+                <div class="stats-title" data-i18n="popup_stats">Статистика</div>
+                <div class="header-time">
+                    <div class="time-date" id="current-date">...</div>
+                    <div class="time-clock" id="current-time">00:00</div>
+                </div>
+            </div>
+            <div class="stats-cards">
+                <div class="stat-card interactive" id="stat-qms" data-type="qms" title="QMS (Shift+клик — список)">
+                    <svg class="stat-icon icon-xl"><use href="#icon-message"></use></svg>
+                    <div class="stat-label">QMS</div>
+                    <div class="stat-number">0</div>
+                </div>
+                <div class="stat-card interactive" id="stat-favorites" data-type="favorites" title="Темы (Shift+клик — список)">
+                    <svg class="stat-icon icon-xl"><use href="#icon-star"></use></svg>
+                    <div class="stat-label" data-i18n="popup_topics">Темы</div>
+                    <div class="stat-number">0</div>
+                </div>
+                <div class="stat-card interactive" id="stat-mentions" data-type="mentions" title="Ответы (Shift+клик — список)">
+                    <svg class="stat-icon icon-xl"><use href="#icon-at"></use></svg>
+                    <div class="stat-label" data-i18n="popup_mentions">Ответы</div>
+                    <div class="stat-number">0</div>
+                </div>
+                <!-- 🎫 Tickets stat card (shown only when tickets_enabled) -->
+                <div class="stat-card interactive" id="stat-tickets" data-type="tickets"
+                     title="Тикеты (Shift+клик — открыть страницу)" style="display:none;">
+                    <svg class="stat-icon icon-xl"><use href="#icon-ticket"></use></svg>
+                    <div class="stat-label">Тикеты</div>
+                    <div class="stat-number">0</div>
+                </div>
+
+                <!-- 📖 History stat card -->
+                <div class="stat-card interactive" id="stat-history" data-type="history" title="Навигация: недавно открытые, рабочие темы и быстрый поиск" data-i18n-title="Навигация: недавно открытые, рабочие темы и быстрый поиск" style="display:none;">
+                    <svg class="stat-icon icon-xl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="12 8 12 12 14 14"></polyline>
+                        <path d="M3.05 11a9 9 0 1 0 .5-4"></path>
+                        <polyline points="3 3 3 7 7 7"></polyline>
+                    </svg>
+                    <div class="stat-label">Навигация</div>
+                    <div class="stat-number"></div>
+                </div>
+                <!-- 🔖 Bookmarks tile (hidden until show_bookmarks_tab enabled) -->
+                <div class="stat-card interactive" id="stat-bookmarks" data-type="bookmarks" title="Закладки" style="display:none;">
+                    <svg class="stat-icon icon-xl"><use href="#icon-bookmark"></use></svg>
+                    <div class="stat-label">Закладки</div>
+                    <div class="stat-number"></div>
+                </div>
+                <!-- 🎵 Inline radio tile (volume slider is inside the tile) -->
+                <div id="stat-radio-inline" class="stat-card radio-tile-expanded" style="display:none; flex-direction:row; align-items:center; gap:7px; padding:6px 10px;">
+                    <!-- Арт / иконка -->
+                    <div id="radio-inline-art-wrap" style="flex-shrink:0;width:32px;height:32px;border-radius:5px;overflow:hidden;background:var(--bg-3);display:flex;align-items:center;justify-content:center;">
+                        <img id="radio-inline-art" src="" alt="" style="width:32px;height:32px;object-fit:cover;display:none;border-radius:5px;">
+                        <svg id="radio-inline-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);opacity:0.7;"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49"/><path d="M7.76 7.76a6 6 0 0 0 0 8.49"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+                    </div>
+                    <!-- Название + трек -->
+                    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:0px;overflow:hidden;">
+                        <span id="radio-inline-name" style="font-size:11px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3;">Радио</span>
+                        <span id="radio-inline-track" style="font-size:10px;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3;display:none;"></span>
+                    </div>
+                    <!-- Кнопка play -->
+                    <button id="radio-inline-btn" style="background:none;border:none;cursor:pointer;font-size:14px;padding:0;color:var(--accent);line-height:1;flex-shrink:0;" title="Play/Pause">▶</button>
+                    <!-- Слайдер громкости -->
+                    <input type="range" id="radio-inline-vol" class="radio-tile-vol" min="0" max="100" value="70" style="flex:1;min-width:50px;max-width:120px;">
+                </div>
+            </div>
+        </div>
+
+        <div id="theme-actions" class="action-buttons">
+            <button id="themes-open-all" class="action-btn interactive" title="Открыть все">
+                <svg class="btn-icon icon"><use href="#icon-folder-open"></use></svg>
+                <span data-i18n="popup_open_all">Открыть все</span>
+            </button>
+            <button id="themes-open-all-pin" class="action-btn interactive" title="Закреплённые">
+                <svg class="btn-icon icon"><use href="#icon-pin"></use></svg>
+                <span data-i18n="popup_pinned">Закреп.</span>
+            </button>
+            <button id="themes-read-all" class="action-btn interactive" title="Прочитать все">
+                <svg class="btn-icon icon"><use href="#icon-check"></use></svg>
+                <span data-i18n="popup_read_all">Прочитать</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- 🎵 Mini Radio Player -->
+    <div id="mini-radio-bar" style="display:none; align-items:center; gap:8px; padding:5px 12px; background:var(--bg-secondary); border-bottom:1px solid var(--border); font-size:12px;">
+        <span id="mini-radio-name" style="flex:1; color:var(--text-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Радио</span>
+        <input type="range" id="mini-radio-vol" min="0" max="100" value="70" style="width:56px; accent-color:var(--accent);">
+        <button id="mini-radio-btn" style="background:none; border:none; cursor:pointer; font-size:16px; padding:2px 4px; color:var(--text-primary);" title="Play/Pause">▶</button>
+    </div>
+
+    <!-- 🎵 Radio Station Panel (sidebar) -->
+    <div id="radio-station-panel" style="display:none;">
+        <div class="rsp-header">
+            <span class="rsp-title">🎵 Радиостанции</span>
+            <button id="rsp-sleep-btn" title="Таймер сна" style="background:none;border:none;cursor:pointer;font-size:13px;padding:0 4px;color:var(--text-3);line-height:1;flex-shrink:0;">⏱</button>
+            <button id="rsp-history-btn" title="История прослушивания" style="background:none;border:none;cursor:pointer;font-size:13px;padding:0 4px;color:var(--text-3);line-height:1;flex-shrink:0;">🕐</button>
+            <button id="rsp-close" class="rsp-close-btn" title="Закрыть">✕</button>
+        </div>
+        <div id="rsp-sleep-area" style="display:none;padding:6px 10px 4px;border-bottom:1px solid var(--border-md);">
+            <div style="font-size:10px;color:var(--text-3);margin-bottom:4px;">Выключить через:</div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;">
+                <button class="rsp-sleep-opt interactive" data-min="15" style="font-size:10px;padding:2px 7px;border-radius:4px;border:1px solid var(--border-md);background:var(--bg-3);color:var(--text-2);cursor:pointer;">15 мин</button>
+                <button class="rsp-sleep-opt interactive" data-min="30" style="font-size:10px;padding:2px 7px;border-radius:4px;border:1px solid var(--border-md);background:var(--bg-3);color:var(--text-2);cursor:pointer;">30 мин</button>
+                <button class="rsp-sleep-opt interactive" data-min="60" style="font-size:10px;padding:2px 7px;border-radius:4px;border:1px solid var(--border-md);background:var(--bg-3);color:var(--text-2);cursor:pointer;">1 час</button>
+                <button class="rsp-sleep-opt interactive" data-min="0" style="font-size:10px;padding:2px 7px;border-radius:4px;border:1px solid var(--border-md);background:var(--bg-3);color:var(--text-2);cursor:pointer;">Отмена</button>
+                <span id="rsp-sleep-status" style="font-size:10px;color:var(--accent);white-space:nowrap;display:none;margin-left:4px;"></span>
+            </div>
+        </div>
+        <div id="rsp-history-area" style="display:none;border-bottom:1px solid var(--border-md);">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 10px 3px;">
+                <span style="font-size:10px;color:var(--text-3);font-weight:600;">История прослушивания</span>
+                <button id="rsp-history-clear" style="font-size:10px;padding:1px 7px;border-radius:4px;border:1px solid var(--border-md);background:var(--bg-3);color:var(--text-3);cursor:pointer;">Очистить</button>
+            </div>
+            <div id="rsp-history-list" style="overflow-y:auto;max-height:260px;padding:2px 0;"></div>
+        </div>
+        <div id="rsp-list" class="rsp-list"></div>
+    </div>
+
+    <!-- 🎵 RADIO HISTORY PANEL -->
+    <div id="radio-history-panel" style="display:none;">
+        <div class="rsp-header">
+            <span class="rsp-title">🎵 История прослушивания</span>
+            <button id="rhp-clear" style="font-size:11px;padding:2px 8px;border-radius:4px;border:1px solid var(--border-md);background:var(--bg-3);color:var(--text-3);cursor:pointer;">Очистить</button>
+            <button id="rhp-close" class="rsp-close-btn" title="Закрыть">✕</button>
+        </div>
+        <div id="rhp-list" style="overflow-y:auto;max-height:300px;padding:4px 0;"></div>
+    </div>
+
+    <!-- ═══════ MAIN CONTENT ═══════ -->
+    <main>
+        <div id="loading-skeleton" class="skeleton-container hidden">
+            <div class="skeleton-card"><div class="skeleton-line skeleton-title"></div><div class="skeleton-line skeleton-meta"></div></div>
+            <div class="skeleton-card"><div class="skeleton-line skeleton-title"></div><div class="skeleton-line skeleton-meta"></div></div>
+            <div class="skeleton-card"><div class="skeleton-line skeleton-title"></div><div class="skeleton-line skeleton-meta"></div></div>
+        </div>
+
+        <div id="empty-state" class="empty-state hidden">
+            <svg class="empty-icon icon-xl"><use href="#icon-target"></use></svg>
+            <div class="empty-title" id="empty-title" data-i18n="popup_empty">Непрочитанных тем нет</div>
+            <div class="empty-subtitle">Последнее обновление: <span id="last-update-time">--:--</span></div>
+            <div class="empty-actions">
+                <button id="refresh-btn" class="empty-btn interactive">
+                    <svg class="btn-icon icon"><use href="#icon-refresh"></use></svg>
+                    <span data-i18n="sidebar_refresh">Обновить</span>
+                </button>
+                <button id="settings-btn" class="empty-btn interactive">
+                    <svg class="btn-icon icon"><use href="#icon-settings"></use></svg>
+                    <span data-i18n="sidebar_settings">Настройки</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 🚀 4Pulse 2.2 Productivity Workspace (Sidebar) -->
+        <section id="productivity-panel" class="productivity-panel hidden">
+            <div class="prod-head">
+                <div>
+                    <div class="prod-title" data-i18n="productivity_title">🚀 Продуктивность</div>
+                    <div class="prod-subtitle" data-i18n="prod_subtitle_sidebar">Рабочее место: заметки и напоминания с привязкой к теме/QMS/тикету</div>
+                </div>
+                <div class="prod-actions">
+                    <button id="prod-add-note" class="prod-btn" data-i18n="prod_add_note">+ заметка</button>
+                    <button id="prod-add-reminder" class="prod-btn" data-i18n="prod_add_reminder">+ напомнить</button>
+                    <button id="prod-close" class="prod-btn prod-ghost">×</button>
+                </div>
+            </div>
+            <div id="prod-input-row" class="prod-input-row hidden">
+                <input id="prod-text" type="text" data-i18n-placeholder="prod_placeholder" placeholder="Например: проверить шапку темы или ответить позже">
+                <select id="prod-remind-select" class="hidden">
+                    <option value="30">через 30 минут</option>
+                    <option value="60">через 1 час</option>
+                    <option value="180">через 3 часа</option>
+                    <option value="1440">завтра</option>
+                </select>
+                <button id="prod-save" class="prod-btn prod-primary">Сохранить</button>
+                <button id="prod-cancel" class="prod-btn prod-ghost">Отмена</button>
+            </div>
+            <div id="prod-list" class="prod-list"></div>
+        </section>
+
+        <ul id="topic-list"    class="topics-list"></ul>
+        <ul id="qms-list"      class="topics-list hidden"></ul>
+        <ul id="mentions-list" class="topics-list hidden"></ul>
+        <ul id="tickets-list"  class="topics-list hidden"></ul>
+        <ul id="bookmarks-list" class="topics-list bookmarks-list hidden"></ul>
+        <ul id="history-list" class="topics-list history-list hidden"></ul>
+
+        <!-- 🔖 Add-bookmark inline form -->
+        <div id="bm-add-form" class="hidden" style="padding:12px 14px 10px;border-top:1px solid var(--border-md);">
+            <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:10px;letter-spacing:.02em;">Тему в закладки</div>
+            <input id="bm-add-title" type="text" placeholder="Название" maxlength="200"
+                style="width:100%;box-sizing:border-box;background:var(--bg-3);border:1px solid var(--border-md);border-radius:8px;padding:7px 10px;font-size:13px;color:var(--text);margin-bottom:6px;outline:none;">
+            <input id="bm-add-url" type="text" placeholder="forum/index.php?showtopic=…"
+                style="width:100%;box-sizing:border-box;background:var(--bg-3);border:1px solid var(--border-md);border-radius:8px;padding:7px 10px;font-size:13px;color:var(--text);margin-bottom:8px;outline:none;" class="hidden">
+            <label id="bm-getnewpost-row" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;cursor:pointer;font-size:13px;color:var(--text);">
+                <span>Переходить к непрочитанным</span>
+                <input type="checkbox" id="bm-getnewpost" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent);">
+            </label>
+            <div style="display:flex;gap:8px;">
+                <button id="bm-add-cancel" style="flex:1;padding:7px;border-radius:8px;border:1px solid var(--border-md);background:transparent;color:var(--text-2);font-size:13px;font-weight:600;cursor:pointer;text-transform:uppercase;letter-spacing:.04em;">Отмена</button>
+                <button id="bm-add-submit" style="flex:1;padding:7px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;text-transform:uppercase;letter-spacing:.04em;">Создать</button>
+            </div>
+        </div>
+
+        <!-- 📁 Create folder / subfolder form -->
+        <div id="bm-folder-form" class="hidden" style="padding:12px 14px 10px;border-top:1px solid var(--border-md);">
+            <div id="bm-folder-form-title" style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:10px;letter-spacing:.02em;">Создание папки</div>
+            <input id="bm-folder-name" type="text" placeholder="Новая папка" maxlength="200"
+                style="width:100%;box-sizing:border-box;background:var(--bg-3);border:1px solid var(--border-md);border-radius:8px;padding:7px 10px;font-size:13px;color:var(--text);margin-bottom:8px;outline:none;">
+            <div style="display:flex;gap:8px;">
+                <button id="bm-folder-cancel" style="flex:1;padding:7px;border-radius:8px;border:1px solid var(--border-md);background:transparent;color:var(--text-2);font-size:13px;font-weight:600;cursor:pointer;text-transform:uppercase;letter-spacing:.04em;">Отмена</button>
+                <button id="bm-folder-submit" style="flex:1;padding:7px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;text-transform:uppercase;letter-spacing:.04em;">Создать</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Custom confirm dialog -->
+    <div id="bm-confirm-dialog" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.55); align-items:center; justify-content:center;">
+        <div style="background:var(--bg-3); border-radius:14px; padding:20px 18px 14px; width:260px; box-shadow:0 8px 32px rgba(0,0,0,0.5); border:1px solid var(--border-md);">
+            <div id="bm-confirm-msg" style="font-size:13px; color:var(--text); margin-bottom:16px; line-height:1.45;"></div>
+            <div style="display:flex; gap:8px; justify-content:flex-end;">
+                <button id="bm-confirm-cancel" style="padding:6px 14px; border-radius:8px; border:1px solid var(--border-md); background:var(--bg-4); color:var(--text-2); font-size:12px; cursor:pointer;">Отмена</button>
+                <button id="bm-confirm-ok" style="padding:6px 14px; border-radius:8px; border:none; background:#e74c3c; color:#fff; font-size:12px; font-weight:600; cursor:pointer;">Удалить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Templates (same as popup) -->
+    <div id="templates">
+        <template id="tpl-topic-card">
+            <li class="topic-card interactive">
+                <div class="card-header">
+                    <svg class="topic-type-icon icon"><use href="#icon-file-text"></use></svg>
+                    <svg class="topic-pin-icon icon hidden"><use href="#icon-pin"></use></svg>
+                    <svg class="topic-focus-icon icon hidden" title="Приоритет"><use href="#icon-target"></use></svg>
+                    <svg class="topic-mute-icon icon hidden" title="Тихий режим"><use href="#icon-bell"></use></svg>
+                </div>
+                <div class="card-body">
+                    <div class="topic-title">Заголовок темы</div>
+                    <div class="topic-meta">
+                        <span class="topic-author"><svg class="icon-sm"><use href="#icon-user"></use></svg> username</span>
+                        <span class="topic-time">• 5 минут назад</span>
+                    </div>
+                </div>
+                <div class="card-actions">
+                    <button class="action-icon topic-focus-btn interactive" title="Режим концентрации: следить за темой">
+                        <svg class="icon"><use href="#icon-target"></use></svg>
+                    </button>
+                    <button class="action-icon topic-mute-btn interactive" title="Тихий режим: заглушить уведомления">
+                        <svg class="icon"><use href="#icon-bell"></use></svg>
+                    </button>
+                    <button class="action-icon mark-read interactive" title="Прочитано">
+                        <svg class="icon"><use href="#icon-eye"></use></svg>
+                    </button>
+                </div>
+            </li>
+        </template>
+        <template id="tpl-topic-card-simple">
+            <li class="topic-card simple interactive">
+                <div class="card-header">
+                    <svg class="topic-type-icon icon"><use href="#icon-file-text"></use></svg>
+                    <svg class="topic-pin-icon icon hidden"><use href="#icon-pin"></use></svg>
+                    <svg class="topic-focus-icon icon hidden" title="Приоритет"><use href="#icon-target"></use></svg>
+                    <svg class="topic-mute-icon icon hidden" title="Тихий режим"><use href="#icon-bell"></use></svg>
+                </div>
+                <div class="card-body">
+                    <div class="topic-title">Заголовок темы</div>
+                </div>
+                <div class="card-actions">
+                    <button class="action-icon topic-focus-btn interactive" title="Режим концентрации: следить за темой">
+                        <svg class="icon"><use href="#icon-target"></use></svg>
+                    </button>
+                    <button class="action-icon topic-mute-btn interactive" title="Тихий режим: заглушить уведомления">
+                        <svg class="icon"><use href="#icon-bell"></use></svg>
+                    </button>
+                    <button class="action-icon mark-read interactive" title="Прочитано">
+                        <svg class="icon"><use href="#icon-eye"></use></svg>
+                    </button>
+                </div>
+            </li>
+        </template>
+
+        <template id="tpl-bookmark-folder">
+            <li class="bookmark-folder">
+                <div class="bookmark-folder-header interactive">
+                    <svg class="icon icon-sm bm-chevron"><use href="#icon-folder-open"></use></svg>
+                    <span class="bookmark-folder-title">Папка</span>
+                    <div class="bookmark-actions">
+                        <button class="bm-rename-btn" aria-label="Переименовать">
+                            <svg class="icon icon-sm"><use href="#icon-edit"></use></svg>
+                        </button>
+                        <button class="bm-delete-btn" aria-label="Удалить">
+                            <svg class="icon icon-sm"><use href="#icon-trash"></use></svg>
+                        </button>
+                    </div>
+                </div>
+                <ul class="bookmark-folder-children"></ul>
+            </li>
+        </template>
+
+        <template id="tpl-bookmark-item">
+            <li class="bookmark-item interactive">
+                <svg class="icon icon-sm bm-item-icon"><use href="#icon-bookmark"></use></svg>
+                <span class="bookmark-item-title"></span>
+                <div class="bookmark-actions">
+                    <button class="bm-rename-btn" aria-label="Переименовать">
+                        <svg class="icon icon-sm"><use href="#icon-edit"></use></svg>
+                    </button>
+                    <button class="bm-delete-btn" aria-label="Удалить">
+                        <svg class="icon icon-sm"><use href="#icon-trash"></use></svg>
+                    </button>
+                </div>
+            </li>
+        </template>
+    </div>
+
+
+    <div id="command-palette-overlay" class="cmd-overlay" hidden>
+        <div class="cmd-palette" role="dialog" aria-modal="true">
+            <div class="cmd-head">
+                <div>
+                    <div class="cmd-title">Командная панель 4Pulse</div>
+                    <div class="cmd-subtitle">Быстрый запуск действий без поиска по меню</div>
+                </div>
+                <button id="cmd-close" class="cmd-close" title="Закрыть">×</button>
+            </div>
+            <input id="cmd-input" class="cmd-input" type="text" placeholder="Напиши: qms, fav, ticket, diag, radio, silence..." autocomplete="off">
+            <div id="cmd-results" class="cmd-results"></div>
+            <div class="cmd-hint">↑↓ выбор · Enter выполнить · Esc закрыть</div>
+        </div>
+    </div>
+    <script src="ui-common.release.js"></script>
+    <script src="pda-smileys.release.js"></script>
+    <script src="sidebar.release.js"></script>
+</body>
+</html>
