@@ -1,0 +1,1641 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4Pulse — Настройки</title>
+    <!-- Google Fonts загружаются лениво из options.release.js только после выбора шрифта -->
+    <link rel="stylesheet" href="options.css">
+    <style>
+        .icon { display: inline-block; width: 20px; height: 20px; vertical-align: middle; }
+        .nav-icon .icon { width: 20px; height: 20px; }
+    </style>
+</head>
+<body>
+    <!-- SVG Icons -->
+    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+      <symbol id="icon-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+      </symbol>
+      <symbol id="icon-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <polyline points="12 6 12 12 16 14"></polyline>
+      </symbol>
+      <symbol id="icon-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+        <circle cx="12" cy="12" r="3"></circle>
+      </symbol>
+      <symbol id="icon-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="16" x2="12" y2="12"></line>
+        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+      </symbol>
+      <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </symbol>
+      <symbol id="icon-star" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+      </symbol>
+      <symbol id="icon-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="5"></circle>
+        <path d="M20 21a8 8 0 1 0-16 0"></path>
+      </symbol>
+      <symbol id="icon-at" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="4"></circle>
+        <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"></path>
+      </symbol>
+      <symbol id="icon-zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 12 Q5 4 8 12 Q11 20 14 12 Q17 4 20 12 L22 12"/>
+        <circle cx="22" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+      </symbol>
+      <symbol id="icon-music" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 18V5l12-2v13"></path>
+        <circle cx="6" cy="18" r="3"></circle>
+        <circle cx="18" cy="16" r="3"></circle>
+      </symbol>
+      <symbol id="icon-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle><line x1="12" y1="2" x2="12" y2="5"></line><line x1="12" y1="19" x2="12" y2="22"></line><line x1="2" y1="12" x2="5" y2="12"></line><line x1="19" y1="12" x2="22" y2="12"></line></symbol>
+    </svg>
+
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>4Pulse</h1>
+            <div class="header-subtitle" data-i18n="header_subtitle">Персональная настройка</div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-wrapper">
+            <!-- Sidebar Navigation -->
+                        <nav class="sidebar">
+                <div class="nav-item active" data-section="notifications">
+                    <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
+                    <span data-i18n="sec_notifications">Уведомления</span>
+                </div>
+                <div class="nav-item" data-section="interface">
+                    <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
+                    <span data-i18n="sec_interface">Интерфейс</span>
+                </div>
+                <div class="nav-item" data-section="behavior">
+                    <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="14 2 18 2 18 6"/><line x1="18" y1="2" x2="11" y2="9"/><path d="M5 15H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2"/><rect x="9" y="11" width="13" height="13" rx="2" ry="2"/></svg></span>
+                    <span data-i18n="sec_behavior">Поведение</span>
+                </div>
+                <div class="nav-item" data-section="appearance">
+                    <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="0.5"/><circle cx="17.5" cy="10.5" r="0.5"/><circle cx="8.5" cy="7.5" r="0.5"/><circle cx="6.5" cy="12.5" r="0.5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg></span>
+                    <span data-i18n="sec_appearance">Внешний вид</span>
+                </div>
+                <div class="nav-item" data-section="radio">
+                    <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><circle cx="9" cy="12" r="3"/><path d="M22 12H12M8.21 5.79A6 6 0 0 1 15 5.79"/></svg></span>
+                    <span data-i18n="sec_radio">Радио</span>
+                </div>
+                <div class="nav-item" data-section="sync">
+                    <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/></svg></span>
+                    <span data-i18n="sec_sync">Синхронизация</span>
+                </div>
+                <div class="nav-item" data-section="system">
+                    <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41M12 2v2M12 20v2M2 12h2M20 12h2"/></svg></span>
+                    <span data-i18n="sec_system">Система</span>
+                </div>
+                <div class="nav-item" data-section="diagnostics">
+                    <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
+                    <span data-i18n="sec_diagnostics">Диагностика</span>
+                </div>
+                <div class="nav-item" data-section="about">
+                    <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span>
+                    <span data-i18n="sec_about">О расширении</span>
+                </div>
+            </nav>
+            <main class="content" role="main">
+                <div class="save-indicator" id="saveIndicator">
+                    <span class="save-icon">✓</span>
+                    <span class="save-text">Сохранено</span>
+                </div>
+                <section class="content-section" id="notifications">
+                    <h2 class="section-title">🔔 Уведомления</h2>
+                    <p class="section-description">Уведомления, звуки и режим тишины</p>
+                    <div class="settings-card">
+                                            <div class="card-header">
+                                                <h3 class="card-title" data-i18n="card_qms">Сообщения (QMS)</h3>
+                                                <p class="card-description" data-i18n="card_qms_desc">Личные сообщения на форуме</p>
+                                            </div>
+                                            <div class="card-content">
+                                                <fieldset id="notification_qms_level" class="radio-group">
+                                                    <label class="radio-card">
+                                                        <input type="radio" name="notification_qms_level" value="20">
+                                                        <span class="radio-content">
+                                                            <span class="radio-title" data-i18n="qms_all">Все сообщения</span>
+                                                            <span class="radio-description" data-i18n="qms_all_desc">Уведомления о каждом новом сообщении</span>
+                                                        </span>
+                                                    </label>
+                                                    <label class="radio-card">
+                                                        <input type="radio" name="notification_qms_level" value="10">
+                                                        <span class="radio-content">
+                                                            <span class="radio-title" data-i18n="qms_new">Новые диалоги</span>
+                                                            <span class="radio-description" data-i18n="qms_new_desc">Только при начале нового диалога</span>
+                                                        </span>
+                                                    </label>
+                                                    <label class="radio-card">
+                                                        <input type="radio" name="notification_qms_level" value="0">
+                                                        <span class="radio-content">
+                                                            <span class="radio-title" data-i18n="notify_off">Не оповещать</span>
+                                                            <span class="radio-description" data-i18n="notify_off_desc">Отключить уведомления</span>
+                                                        </span>
+                                                    </label>
+                                                </fieldset>
+                                            </div>
+                                        </div>
+                    <div class="settings-card">
+                                            <div class="card-header">
+                                                <h3 class="card-title" data-i18n="card_topics_notify">Темы форума</h3>
+                                                <p class="card-description" data-i18n="card_topics_notify_desc">Избранные темы и обсуждения</p>
+                                            </div>
+                                            <div class="card-content">
+                                                <div class="setting-group">
+                                                    <label class="setting-label" data-i18n="topics_notify_lbl">Всплывающие уведомления</label>
+                                                    <fieldset id="notification_themes_level" class="radio-group">
+                                                        <label class="radio-card">
+                                                            <input type="radio" name="notification_themes_level" value="20">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title" data-i18n="topics_all_comments">Все комментарии</span>
+                                                            </span>
+                                                        </label>
+                                                        <label class="radio-card">
+                                                            <input type="radio" name="notification_themes_level" value="12">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title" data-i18n="topics_new_pinned">Новые темы + комментарии в закреплённых</span>
+                                                            </span>
+                                                        </label>
+                                                        <label class="radio-card">
+                                                            <input type="radio" name="notification_themes_level" value="10">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title" data-i18n="topics_new_all">Все новые темы</span>
+                                                            </span>
+                                                        </label>
+                                                        <label class="radio-card">
+                                                            <input type="radio" name="notification_themes_level" value="5">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title" data-i18n="topics_new_pinned_only">Новые закреплённые темы</span>
+                                                            </span>
+                                                        </label>
+                                                        <label class="radio-card">
+                                                            <input type="radio" name="notification_themes_level" value="0">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title" data-i18n="notify_off">Не оповещать</span>
+                                                            </span>
+                                                        </label>
+                                                    </fieldset>
+                                                </div>
+
+                                            </div>
+                                        </div>
+                    <div class="settings-card">
+                                            <div class="card-header">
+                                                <h3 class="card-title" data-i18n="card_mentions_notify">Упоминания</h3>
+                                                <p class="card-description" data-i18n="card_mentions_notify_desc">Когда кто-то упоминает ваш ник</p>
+                                            </div>
+                                            <div class="card-content">
+                                                <fieldset id="notification_mentions_level" class="radio-group">
+                                                    <label class="radio-card">
+                                                        <input type="radio" name="notification_mentions_level" value="20">
+                                                        <span class="radio-content">
+                                                            <span class="radio-title" data-i18n="mentions_all">Все упоминания</span>
+                                                            <span class="radio-description" data-i18n="mentions_all_desc">Уведомления о каждом упоминании</span>
+                                                        </span>
+                                                    </label>
+                                                    <label class="radio-card">
+                                                        <input type="radio" name="notification_mentions_level" value="0">
+                                                        <span class="radio-content">
+                                                            <span class="radio-title" data-i18n="notify_off">Не оповещать</span>
+                                                            <span class="radio-description" data-i18n="notify_off_desc">Отключить уведомления</span>
+                                                        </span>
+                                                    </label>
+                                                </fieldset>
+                                            </div>
+                                        </div>
+                    <div class="settings-card">
+                                            <div class="card-header">
+                                                <h3 class="card-title" data-i18n="card_sound">🔊 Звук уведомлений</h3>
+                                                <p class="card-description" data-i18n="card_sound_desc">Звуковое оповещение при новых событиях</p>
+                                            </div>
+                                            <div class="card-content">
+                                                <!-- Sound toggles for each type -->
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label" data-i18n="sound_qms_lbl">📧 QMS (личные сообщения)</span>
+                                                        <span class="toggle-description" data-i18n="tdesc_sound_qms">Звук при новых личных сообщениях</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="sound_qms">
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label"><svg class="icon" style="width: 16px; height: 16px;"><use href="#icon-star"></use></svg> <span data-i18n="sound_topics_lbl">Темы</span></span>
+                                                        <span class="toggle-description" data-i18n="tdesc_sound_topics">Звук при новых сообщениях в избранных темах</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="sound_themes">
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label"><svg class="icon" style="width: 16px; height: 16px;"><use href="#icon-star"></use></svg> <span data-i18n="sound_all_comments">Звук на каждый новый комментарий</span></span>
+                                                        <span class="toggle-description" data-i18n="tdesc_sound_repeat">Играть звук повторно, если в непрочитанную тему пришёл ещё один комментарий</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="sound_themes_all_comments">
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label"><svg class="icon" style="width: 16px; height: 16px;"><use href="#icon-at"></use></svg> <span data-i18n="sound_mentions_lbl">Упоминания</span></span>
+                                                        <span class="toggle-description" data-i18n="tdesc_sound_mentions">Звук при новых упоминаниях</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="sound_mentions">
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+
+                                                <!-- Sound selection: per-type -->
+                                                <!-- Мелодия: 🔔 Мелодия для QMS -->
+                                                <div class="setting-group sound-file-group">
+                                                    <label class="setting-label" data-i18n="sound_melody_qms">🔔 Мелодия для QMS</label>
+                                                    <fieldset id="sound_file_qms" class="radio-group sound-radio-group">
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_qms" value="notify">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title">🔔 Notify</span>
+                                                                <span class="radio-description" data-i18n="snd_notify_desc">Мягкий звук уведомления</span>
+                                                            </span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="notify" title="Прослушать">▶</button>
+                                                        </label>
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_qms" value="exclamation">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title">⚡ Exclamation</span>
+                                                                <span class="radio-description" data-i18n="snd_excl_desc">Короткий, привлекающий внимание</span>
+                                                            </span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="exclamation" title="Прослушать">▶</button>
+                                                        </label>
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_qms" value="foreground">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title">🎵 Foreground</span>
+                                                                <span class="radio-description" data-i18n="snd_fg_desc">Приятный мелодичный звук</span>
+                                                            </span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="foreground" title="Прослушать">▶</button>
+                                                        </label>
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_qms" value="bubble">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title">🫧 Bubble</span>
+                                                                <span class="radio-description" data-i18n="snd_bubble_desc">Мягкий лопающийся пузырь</span>
+                                                            </span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="bubble" title="Прослушать">▶</button>
+                                                        </label>
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_qms" value="ping">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title">🏓 Ping</span>
+                                                                <span class="radio-description" data-i18n="snd_ping_desc">Чёткий короткий пинг</span>
+                                                            </span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="ping" title="Прослушать">▶</button>
+                                                        </label>
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_qms" value="chime">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title">🎐 Chime</span>
+                                                                <span class="radio-description" data-i18n="snd_chime_desc">Нежный перезвон колокольчиков</span>
+                                                            </span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="chime" title="Прослушать">▶</button>
+                                                        </label>
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_qms" value="dingdong">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title">🔔 Ding-dong</span>
+                                                                <span class="radio-description" data-i18n="snd_dong_desc">Двойной классический тон</span>
+                                                            </span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="dingdong" title="Прослушать">▶</button>
+                                                        </label>
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_qms" value="whoosh">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title">💨 Whoosh</span>
+                                                                <span class="radio-description" data-i18n="snd_whoosh_desc">Энергичный нарастающий свист</span>
+                                                            </span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="whoosh" title="Прослушать">▶</button>
+                                                        </label>
+                                                    </fieldset>
+                                                </div>
+
+                                                <!-- Мелодия: ⭐ Мелодия для тем -->
+                                                <div class="setting-group sound-file-group">
+                                                    <label class="setting-label" data-i18n="sound_melody_topics">⭐ Мелодия для тем</label>
+                                                    <fieldset id="sound_file_themes" class="radio-group sound-radio-group">
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_themes" value="notify">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title">🔔 Notify</span>
+                                                                <span class="radio-description" data-i18n="snd_notify_desc">Мягкий звук уведомления</span>
+                                                            </span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="notify" title="Прослушать">▶</button>
+                                                        </label>
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_themes" value="exclamation">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title">⚡ Exclamation</span>
+                                                                <span class="radio-description" data-i18n="snd_excl_desc">Короткий, привлекающий внимание</span>
+                                                            </span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="exclamation" title="Прослушать">▶</button>
+                                                        </label>
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_themes" value="foreground">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title">🎵 Foreground</span>
+                                                                <span class="radio-description" data-i18n="snd_fg_desc">Приятный мелодичный звук</span>
+                                                            </span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="foreground" title="Прослушать">▶</button>
+                                                        </label>
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_themes" value="bubble">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title">🫧 Bubble</span>
+                                                                <span class="radio-description" data-i18n="snd_bubble_desc">Мягкий лопающийся пузырь</span>
+                                                            </span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="bubble" title="Прослушать">▶</button>
+                                                        </label>
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_themes" value="ping">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title">🏓 Ping</span>
+                                                                <span class="radio-description" data-i18n="snd_ping_desc">Чёткий короткий пинг</span>
+                                                            </span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="ping" title="Прослушать">▶</button>
+                                                        </label>
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_themes" value="chime">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title">🎐 Chime</span>
+                                                                <span class="radio-description" data-i18n="snd_chime_desc">Нежный перезвон колокольчиков</span>
+                                                            </span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="chime" title="Прослушать">▶</button>
+                                                        </label>
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_themes" value="dingdong">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title">🔔 Ding-dong</span>
+                                                                <span class="radio-description" data-i18n="snd_dong_desc">Двойной классический тон</span>
+                                                            </span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="dingdong" title="Прослушать">▶</button>
+                                                        </label>
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_themes" value="whoosh">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title">💨 Whoosh</span>
+                                                                <span class="radio-description" data-i18n="snd_whoosh_desc">Энергичный нарастающий свист</span>
+                                                            </span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="whoosh" title="Прослушать">▶</button>
+                                                        </label>
+                                                    </fieldset>
+                                                </div>
+
+                                                <!-- Мелодия: @ Мелодия для упоминаний -->
+                                                <div class="setting-group sound-file-group">
+                                                    <label class="setting-label" data-i18n="sound_melody_mentions">@ Мелодия для упоминаний</label>
+                                                    <fieldset id="sound_file_mentions" class="radio-group sound-radio-group">
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_mentions" value="notify">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title">🔔 Notify</span>
+                                                                <span class="radio-description" data-i18n="snd_notify_desc">Мягкий звук уведомления</span>
+                                                            </span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="notify" title="Прослушать">▶</button>
+                                                        </label>
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_mentions" value="exclamation">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title">⚡ Exclamation</span>
+                                                                <span class="radio-description" data-i18n="snd_excl_desc">Короткий, привлекающий внимание</span>
+                                                            </span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="exclamation" title="Прослушать">▶</button>
+                                                        </label>
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_mentions" value="foreground">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title">🎵 Foreground</span>
+                                                                <span class="radio-description" data-i18n="snd_fg_desc">Приятный мелодичный звук</span>
+                                                            </span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="foreground" title="Прослушать">▶</button>
+                                                        </label>
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_mentions" value="bubble">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title">🫧 Bubble</span>
+                                                                <span class="radio-description" data-i18n="snd_bubble_desc">Мягкий лопающийся пузырь</span>
+                                                            </span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="bubble" title="Прослушать">▶</button>
+                                                        </label>
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_mentions" value="ping">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title">🏓 Ping</span>
+                                                                <span class="radio-description" data-i18n="snd_ping_desc">Чёткий короткий пинг</span>
+                                                            </span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="ping" title="Прослушать">▶</button>
+                                                        </label>
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_mentions" value="chime">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title">🎐 Chime</span>
+                                                                <span class="radio-description" data-i18n="snd_chime_desc">Нежный перезвон колокольчиков</span>
+                                                            </span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="chime" title="Прослушать">▶</button>
+                                                        </label>
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_mentions" value="dingdong">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title">🔔 Ding-dong</span>
+                                                                <span class="radio-description" data-i18n="snd_dong_desc">Двойной классический тон</span>
+                                                            </span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="dingdong" title="Прослушать">▶</button>
+                                                        </label>
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_mentions" value="whoosh">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title">💨 Whoosh</span>
+                                                                <span class="radio-description" data-i18n="snd_whoosh_desc">Энергичный нарастающий свист</span>
+                                                            </span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="whoosh" title="Прослушать">▶</button>
+                                                        </label>
+                                                    </fieldset>
+                                                </div>
+
+                                                                            <!-- Volume slider -->
+                                                <div class="setting-group">
+                                                    <label class="setting-label" data-i18n="sound_volume_lbl">Громкость</label>
+                                                    <div class="slider-wrapper">
+                                                        <span>🔈</span>
+                                                        <input type="range" id="sound_volume" class="slider" min="0" max="100" value="50">
+                                                        <span>🔊</span>
+                                                        <span class="slider-value" id="sound_volume_output">50%</span>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Test button -->
+                                                <div class="setting-group">
+                                                    <button type="button" id="sound_test_btn" class="test-sound-btn">
+                                                        <span data-i18n="sound_test">🔊 Проверить звук</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                    <div class="settings-card dnd-card">
+                                            <div class="card-header">
+                                                <h3 class="card-title" data-i18n="card_dnd">🌙 Не беспокоить</h3>
+                                                <p class="card-description" data-i18n="card_dnd_desc">Блокирует уведомления и звуки в указанное время</p>
+                                            </div>
+                                            <div class="card-content">
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label" data-i18n="dnd_enable">Включить режим «Не беспокоить»</span>
+                                                        <span class="toggle-description" data-i18n="dnd_enable_desc">Уведомления не будут показываться в выбранное время</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="dnd_enabled">
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+                                                <div class="dnd-settings" id="dnd_settings_body">
+                                                    <div class="dnd-time-row">
+                                                        <div class="dnd-time-field">
+                                                            <label class="dnd-time-label" data-i18n="dnd_from">С</label>
+                                                            <input type="time" id="dnd_from" class="dnd-time-input" value="23:00">
+                                                        </div>
+                                                        <div class="dnd-time-sep">—</div>
+                                                        <div class="dnd-time-field">
+                                                            <label class="dnd-time-label" data-i18n="dnd_to">До</label>
+                                                            <input type="time" id="dnd_to" class="dnd-time-input" value="08:00">
+                                                        </div>
+                                                        <div class="dnd-time-hint" id="dnd_time_hint"></div>
+                                                    </div>
+                                                    <div class="dnd-days-row">
+                                                        <span class="dnd-days-label" data-i18n="dnd_days">Дни</span>
+                                                        <div class="dnd-days-grid" id="dnd_days_grid">
+                                                            <button type="button" class="dnd-day-btn" data-day="1" data-i18n="day_mon">Пн</button>
+                                                            <button type="button" class="dnd-day-btn" data-day="2" data-i18n="day_tue">Вт</button>
+                                                            <button type="button" class="dnd-day-btn" data-day="3" data-i18n="day_wed">Ср</button>
+                                                            <button type="button" class="dnd-day-btn" data-day="4" data-i18n="day_thu">Чт</button>
+                                                            <button type="button" class="dnd-day-btn" data-day="5" data-i18n="day_fri">Пт</button>
+                                                            <button type="button" class="dnd-day-btn dnd-day-weekend" data-day="6" data-i18n="day_sat">Сб</button>
+                                                            <button type="button" class="dnd-day-btn dnd-day-weekend" data-day="0" data-i18n="day_sun">Вс</button>
+                                                        </div>
+                                                    </div>
+                                                    <label class="toggle-setting" style="margin-top: 10px;">
+                                                        <div class="toggle-info">
+                                                            <span class="toggle-label" data-i18n="dnd_mentions">Упоминания пробивают DND</span>
+                                                            <span class="toggle-description" data-i18n="dnd_mentions_desc">@ Уведомления об упоминаниях будут приходить даже в тихие часы</span>
+                                                        </div>
+                                                        <div class="toggle-switch">
+                                                            <input type="checkbox" id="dnd_allow_mentions">
+                                                            <span class="toggle-slider"></span>
+                                                        </div>
+                                                    </label>
+                                                    <label class="toggle-setting" style="margin-top: 10px;">
+                                                        <div class="toggle-info">
+                                                            <span class="toggle-label">QMS пробивают DND</span>
+                                                            <span class="toggle-description">Личные сообщения будут приходить даже в тихие часы, но обычные темы останутся без уведомлений</span>
+                                                        </div>
+                                                        <div class="toggle-switch">
+                                                            <input type="checkbox" id="dnd_allow_qms">
+                                                            <span class="toggle-slider"></span>
+                                                        </div>
+                                                    </label>
+                                                    <label class="toggle-setting" id="dnd_ticket_row" style="margin-top: 10px; display:none;">
+                                                        <div class="toggle-info">
+                                                            <span class="toggle-label">Тикеты пробивают DND</span>
+                                                            <span class="toggle-description">Модераторские тикеты останутся видимыми даже в тихие часы</span>
+                                                        </div>
+                                                        <div class="toggle-switch">
+                                                            <input type="checkbox" id="dnd_allow_tickets">
+                                                            <span class="toggle-slider"></span>
+                                                        </div>
+                                                    </label>
+                                                    <label class="toggle-setting" style="margin-top: 10px;">
+                                                        <div class="toggle-info">
+                                                            <span class="toggle-label">Приглушать радио в DND</span>
+                                                            <span class="toggle-description">Зарезервировано для следующего шага: автоматическое снижение громкости радио в тихие часы</span>
+                                                        </div>
+                                                        <div class="toggle-switch">
+                                                            <input type="checkbox" id="dnd_mute_radio">
+                                                            <span class="toggle-slider"></span>
+                                                        </div>
+                                                    </label>
+                                                    <div class="dnd-preset-row" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+                                                        <button type="button" class="dnd-preset-btn interactive" data-preset="sleep">Сон</button>
+                                                        <button type="button" class="dnd-preset-btn interactive" data-preset="work">Работа</button>
+                                                        <button type="button" class="dnd-preset-btn interactive" data-preset="strict">Строго</button>
+                                                        <button type="button" class="dnd-preset-btn interactive" data-preset="moderator">Модератор</button>
+                                                    </div>
+                                                    <div class="dnd-status" id="dnd_status"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                    <div class="settings-card" id="tickets-settings-card" style="display:none;">
+                                            <div class="card-header">
+                                                <h3 class="card-title">🎫 Тикеты <span style="font-size:10px;background:var(--accent);color:#fff;padding:2px 7px;border-radius:10px;vertical-align:middle;">Только для модераторов</span></h3>
+                                                <p class="card-description">Мониторинг и обработка тикетов прямо из расширения</p>
+                                            </div>
+                                            <div class="card-content">
+                                                <!-- Enable toggle -->
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label">Включить раздел тикетов</span>
+                                                        <span class="toggle-description">Добавляет вкладку «Тикеты» в попап расширения и показывает счётчик на иконке</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="tickets_enabled">
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+
+                                                <!-- Notification level -->
+                                                <div class="setting-group" style="margin-top:12px;">
+                                                    <label class="setting-label">Уведомления о новых тикетах</label>
+                                                    <fieldset id="notification_tickets_level" class="radio-group">
+                                                        <label class="radio-card">
+                                                            <input type="radio" name="notification_tickets_level" value="20">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title">Все новые тикеты</span>
+                                                                <span class="radio-description">Уведомление при каждом необработанном тикете</span>
+                                                            </span>
+                                                        </label>
+                                                        <label class="radio-card">
+                                                            <input type="radio" name="notification_tickets_level" value="0">
+                                                            <span class="radio-content">
+                                                                <span class="radio-title">Не оповещать</span>
+                                                            </span>
+                                                        </label>
+                                                    </fieldset>
+                                                </div>
+
+                                                <!-- Sound toggle -->
+                                                <label class="toggle-setting" style="margin-top:12px;">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label">🔊 Звук при новом тикете</span>
+                                                        <span class="toggle-description">Звуковое оповещение при появлении нового необработанного тикета</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="sound_tickets">
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+
+                                                <!-- Sound file -->
+                                                <div class="setting-group sound-file-group" id="tickets_sound_group" style="display:none;margin-top:8px;">
+                                                    <label class="setting-label">🎫 Мелодия для тикетов</label>
+                                                    <fieldset id="sound_file_tickets" class="radio-group sound-radio-group">
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_tickets" value="notify">
+                                                            <span class="radio-content"><span class="radio-title">🔔 Notify</span></span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="notify">▶</button>
+                                                        </label>
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_tickets" value="exclamation">
+                                                            <span class="radio-content"><span class="radio-title">⚡ Exclamation</span></span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="exclamation">▶</button>
+                                                        </label>
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_tickets" value="chime">
+                                                            <span class="radio-content"><span class="radio-title">🎐 Chime</span></span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="chime">▶</button>
+                                                        </label>
+                                                        <label class="radio-card sound-radio-card">
+                                                            <input type="radio" name="sound_file_tickets" value="ping">
+                                                            <span class="radio-content"><span class="radio-title">🏓 Ping</span></span>
+                                                            <button type="button" class="sound-preview-btn" data-sound="ping">▶</button>
+                                                        </label>
+                                                    </fieldset>
+                                                </div>
+
+                                                <!-- Lock / hide button -->
+                                                <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">
+                                                    <button type="button" id="tickets-lock-btn"
+                                                        style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);
+                                                               background:transparent;color:var(--text-3);border:1px solid var(--border);cursor:pointer;">
+                                                        🔒 Скрыть настройки тикетов
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                </section>
+                <section class="content-section" id="interface">
+                    <h2 class="section-title">📐 Интерфейс</h2>
+                    <p class="section-description">Плитки, вкладки, список тем и размер окна</p>
+                    <div class="settings-card" id="compact-stats-card">
+                                            <div class="card-header">
+                                                <h3 class="card-title" data-i18n="compact_title">📊 Компактная статистика</h3>
+                                                <p class="card-description" data-i18n="compact_desc">Превращает сетку плиток в узкую горизонтальную полосу — освобождает больше места для списка тем</p>
+                                            </div>
+                                            <div class="card-content">
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label" data-i18n="compact_enable_lbl">Компактная статистика</span>
+                                                        <span class="toggle-description" data-i18n="compact_enable_desc">Плитки перестраиваются из сетки в горизонтальный ряд (иконка + цифра)</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="compact_stats">
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label" data-i18n="compact_collapsed_lbl">Свернуто (только статистика)</span>
+                                                        <span class="toggle-description" data-i18n="compact_collapsed_desc">Скрыть все списки — показывать только строку со счётчиками</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="compact_only_stats">
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label" data-i18n="compact_show_topics_lbl">Показывать список тем</span>
+                                                        <span class="toggle-description" data-i18n="compact_show_topics_desc">Показывать список тем под строкой статистики</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="compact_show_topics">
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label" data-i18n="compact_hide_qms_lbl">Скрыть плитку QMS</span>
+                                                        <span class="toggle-description" data-i18n="compact_hide_qms_desc">Не показывать счётчик QMS в строке статистики</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="compact_hide_qms">
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label">Скрыть плитку «Избранные»</span>
+                                                        <span class="toggle-description">Не показывать счётчик избранных тем в строке статистики</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="compact_hide_favorites">
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label">Скрыть плитку «Упоминания»</span>
+                                                        <span class="toggle-description">Не показывать счётчик упоминаний в строке статистики</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="compact_hide_mentions">
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label">Показывать тулбар сортировки тем</span>
+                                                        <span class="toggle-description">Кнопки сортировки, группировки и фильтрации по тегам над списком Избранных</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="show_fav_toolbar" checked>
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label" data-i18n="show_topic_actions_lbl">Показывать быстрые действия в темах</span>
+                                                        <span class="toggle-description" data-i18n="show_topic_actions_desc">Кнопки предпросмотра, приоритета, тихого режима, отметки прочитанным и тегов в карточках тем</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="show_topic_action_buttons" checked>
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label">Отключить анимацию новых тем</span>
+                                                        <span class="toggle-description">Убирает мерцание и анимацию появления карточек тем — панель больше не мигает при обновлении</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="disable_topic_animations">
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+
+                                                <!-- ★ Tile Row Configurator -->
+                                                <div style="padding:14px 0 6px; border-top:1px solid var(--border);">
+                                                    <div class="toggle-info" style="margin-bottom:10px;">
+                                                        <span class="toggle-label">Расположение плиток</span>
+                                                        <span class="toggle-description">Перетащите плитки между рядами. До 5 плиток в ряду, незаполненный ряд растягивается автоматически</span>
+                                                    </div>
+                                                    <div id="tile-configurator">
+                                                        <div style="display:flex;flex-direction:column;gap:6px;" id="tile-rows-editor">
+                                                            <div class="tile-row-label">Ряд 1</div>
+                                                            <div class="tile-drop-zone" id="tile-row-1" data-row="1"></div>
+                                                            <div class="tile-row-label">Ряд 2</div>
+                                                            <div class="tile-drop-zone" id="tile-row-2" data-row="2"></div>
+                                                            <div class="tile-row-label" style="color:var(--text-3);">Скрытые</div>
+                                                            <div class="tile-drop-zone tile-drop-zone--hidden" id="tile-row-hidden" data-row="hidden"></div>
+                                                        </div>
+                                                        <button id="tile-rows-reset" style="margin-top:8px;font-size:11px;padding:3px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:transparent;color:var(--text-3);cursor:pointer;">Сбросить</button>
+                                                    </div>
+                                                </div>
+
+                                                <div class="setting-row" style="display:flex; align-items:center; justify-content:space-between; padding:12px 0 4px; border-top:1px solid var(--border);">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label">Строк в списке тем</span>
+                                                        <span class="toggle-description">Сколько тем показывать без прокрутки. 0 = без ограничения</span>
+                                                    </div>
+                                                    <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                                                        <button class="stepper-btn stepper-decrease" data-target="max_visible_topics">−</button>
+                                                        <input type="number" id="max_visible_topics" class="number-input-stepper"
+                                                               min="0" max="30" value="0"
+                                                               style="width:46px; text-align:center; padding:5px 4px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--bg-secondary); color:var(--text); font-size:13px;">
+                                                        <button class="stepper-btn stepper-increase" data-target="max_visible_topics">+</button>
+                                                    </div>
+                                                </div>
+
+
+                                            </div>
+                                        </div>
+                    <div class="settings-card">
+                                            <div class="card-header">
+                                                <h3 class="card-title" data-i18n="card_interface_opt">Опциональность интерфейса</h3>
+                                                <p class="card-description" data-i18n="card_interface_opt_desc">Скрыть ненужные элементы интерфейса</p>
+                                            </div>
+                                            <div class="card-content">
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label" data-i18n="show_bookmarks_tab">🔖 Показывать вкладку «Закладки»</span>
+                                                        <span class="toggle-description" data-i18n="tdesc_bookmarks_tab">Плитка «Закладки» в статистике и вкладка в попапе/сайдбаре</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="show_bookmarks_tab">
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label">📖 Показывать вкладку «Навигация»</span>
+                                                        <span class="toggle-description">Недавно открытые, рабочие темы, последний тикет и быстрый поиск</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="show_history_tab">
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+                    <div class="settings-card" id="productivity-card">
+                                            <div class="card-header">
+                                                <h3 class="card-title" data-i18n="productivity_title">🚀 Продуктивность</h3>
+                                                <p class="card-description" data-i18n="productivity_desc">Локальные заметки и отложенные напоминания с привязкой к теме, QMS или тикету.</p>
+                                            </div>
+                                            <div class="card-content">
+                                                <label class="toggle-setting"><div class="toggle-info"><span class="toggle-label" data-i18n="productivity_panel_lbl">Панель продуктивности</span><span class="toggle-description" data-i18n="productivity_panel_desc">Popup показывает компактно, Sidebar используется как полноценное рабочее место.</span></div><div class="toggle-switch"><input type="checkbox" id="productivity_panel_enabled"><span class="toggle-slider"></span></div></label>
+                                                <label class="toggle-setting"><div class="toggle-info"><span class="toggle-label" data-i18n="productivity_cleanup_lbl">Автоочистка выполненных напоминаний</span><span class="toggle-description" data-i18n="productivity_cleanup_desc">Скрывает выполненные напоминания старше 7 дней.</span></div><div class="toggle-switch"><input type="checkbox" id="productivity_auto_cleanup"><span class="toggle-slider"></span></div></label>
+                                                <div class="hint-box" style="margin-top:12px;" data-i18n="productivity_hint">Команды: <b>note</b> — новая заметка, <b>snooze</b> — напоминание, <b>tasks</b> — открыть панель продуктивности.</div>
+                                            </div>
+                                        </div>
+                </section>
+                <section class="content-section" id="behavior">
+                    <h2 class="section-title">⚡ Поведение</h2>
+                    <p class="section-description">Клики, открытие тем и кнопки тулбара</p>
+                    <div class="settings-card" id="click-action-card">
+                                            <div class="card-header">
+                                                <h3 class="card-title" data-i18n="tile_click_title">🖱️ Действие при клике на плитку</h3>
+                                                <p class="card-description" data-i18n="tile_click_desc">Выберите, что происходит при обычном клике на QMS, Темы и Упоминания</p>
+                                            </div>
+                                            <div class="card-content">
+                                                <fieldset id="primary_click_action" class="radio-group">
+                                                    <label class="radio-card">
+                                                        <input type="radio" name="primary_click_action" value="forum">
+                                                        <span class="radio-content">
+                                                            <span class="radio-title" data-i18n="tile_click_forum">🌐 На форум</span>
+                                                            <span class="radio-desc" data-i18n="tile_click_forum_desc">ЛКМ открывает страницу на сайте · Shift+клик показывает список в попапе</span>
+                                                        </span>
+                                                    </label>
+                                                    <label class="radio-card">
+                                                        <input type="radio" name="primary_click_action" value="popup">
+                                                        <span class="radio-content">
+                                                            <span class="radio-title" data-i18n="tile_click_popup">📋 В расширение</span>
+                                                            <span class="radio-desc" data-i18n="tile_click_popup_desc">ЛКМ показывает список в попапе · Shift+клик открывает страницу на сайте</span>
+                                                        </span>
+                                                    </label>
+                                                </fieldset>
+                                            </div>
+                                        </div>
+                    <div class="settings-card">
+                                            <div class="card-header">
+                                                <h3 class="card-title" data-i18n="card_pinned">Закреплённые темы</h3>
+                                                <p class="card-description" data-i18n="card_pinned_desc">Как отображать закреплённые темы</p>
+                                            </div>
+                                            <div class="card-content">
+                                                <fieldset id="toolbar_pin_themes_level" class="radio-group">
+                                                    <label class="radio-card">
+                                                        <input type="radio" name="toolbar_pin_themes_level" value="0">
+                                                        <span class="radio-content">
+                                                            <span class="radio-title" data-i18n="pinned_all">Все темы вместе</span>
+                                                            <span class="radio-description" data-i18n="pinned_all_desc">Закреплённые и обычные темы в общем списке</span>
+                                                        </span>
+                                                    </label>
+                                                    <label class="radio-card">
+                                                        <input type="radio" name="toolbar_pin_themes_level" value="10">
+                                                        <span class="radio-content">
+                                                            <span class="radio-title" data-i18n="pinned_top">Закреплённые сверху</span>
+                                                            <span class="radio-description" data-i18n="pinned_top_desc">Закреплённые темы показываются первыми</span>
+                                                        </span>
+                                                    </label>
+                                                    <label class="radio-card">
+                                                        <input type="radio" name="toolbar_pin_themes_level" value="20">
+                                                        <span class="radio-content">
+                                                            <span class="radio-title" data-i18n="pinned_only">Только закреплённые</span>
+                                                            <span class="radio-description" data-i18n="pinned_only_desc">Показывать только закреплённые темы</span>
+                                                        </span>
+                                                    </label>
+                                                </fieldset>
+                                            </div>
+                                        </div>
+                    <div class="settings-card">
+                                            <div class="card-header">
+                                                <h3 class="card-title" data-i18n="card_popup_view">Вид попапа при открытии</h3>
+                                                <p class="card-description" data-i18n="card_popup_view_desc">Что показывать при открытии расширения</p>
+                                            </div>
+                                            <div class="card-content">
+                                                <fieldset id="toolbar_default_view" class="radio-group">
+                                                    <label class="radio-card">
+                                                        <input type="radio" name="toolbar_default_view" value="collapsed">
+                                                        <span class="radio-content">
+                                                            <span class="radio-title" data-i18n="popup_view_collapsed">Свернуто (только статистика)</span>
+                                                            <span class="radio-description" data-i18n="popup_view_collapsed_desc">Показать только счётчики, без списков</span>
+                                                        </span>
+                                                    </label>
+                                                    <label class="radio-card">
+                                                        <input type="radio" name="toolbar_default_view" value="qms">
+                                                        <span class="radio-content">
+                                                            <span class="radio-title" data-i18n="popup_view_qms">Открыть вкладку "QMS"</span>
+                                                            <span class="radio-description" data-i18n="popup_view_qms_desc">Автоматически показать QMS диалоги</span>
+                                                        </span>
+                                                    </label>
+                                                    <label class="radio-card">
+                                                        <input type="radio" name="toolbar_default_view" value="favorites">
+                                                        <span class="radio-content">
+                                                            <span class="radio-title" data-i18n="popup_view_topics">Открыть вкладку "Темы"</span>
+                                                            <span class="radio-description" data-i18n="popup_view_topics_desc">Автоматически показать список тем</span>
+                                                        </span>
+                                                    </label>
+                                                    <label class="radio-card">
+                                                        <input type="radio" name="toolbar_default_view" value="mentions">
+                                                        <span class="radio-content">
+                                                            <span class="radio-title" data-i18n="popup_view_mentions">Открыть вкладку "Упоминания"</span>
+                                                            <span class="radio-description" data-i18n="popup_view_mentions_desc">Автоматически показать упоминания</span>
+                                                        </span>
+                                                    </label>
+                                                </fieldset>
+                                            </div>
+                                        </div>
+                    <div class="settings-card">
+                                            <div class="card-header">
+                                                <h3 class="card-title" data-i18n="card_elements">Отображение элементов</h3>
+                                                <p class="card-description" data-i18n="card_elements_desc">Показывать все элементы или только непрочитанные</p>
+                                            </div>
+                                            <div class="card-content">
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label" data-i18n="show_all_topics">Показывать все темы</span>
+                                                        <span class="toggle-description" data-i18n="tdesc_show_topics">Включая прочитанные темы из избранного</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="show_all_favorites">
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label" data-i18n="show_all_qms">Показывать все QMS диалоги</span>
+                                                        <span class="toggle-description" data-i18n="tdesc_show_qms">Включая прочитанные диалоги</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="show_all_qms">
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label" data-i18n="show_all_mentions">Показывать все упоминания</span>
+                                                        <span class="toggle-description" data-i18n="tdesc_show_mentions">Включая прочитанные упоминания</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="show_all_mentions">
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+                    <div class="settings-card">
+                                            <div class="card-header">
+                                                <h3 class="card-title" data-i18n="card_buttons">Управляющие кнопки</h3>
+                                                <p class="card-description" data-i18n="card_buttons_desc">Кнопки массовых действий в попапе</p>
+                                            </div>
+                                            <div class="card-content">
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label" data-i18n="btn_open_unread">"Открыть непрочитанные темы"</span>
+                                                        <span class="toggle-description" data-i18n="btn_open_unread_desc">Показать кнопку массового открытия тем</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="toolbar_button_open_all" checked>
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+
+                                                <div class="setting-group">
+                                                    <label class="setting-label" data-i18n="btn_batch_size">Открывать порциями по</label>
+                                                    <div class="number-stepper">
+                                                        <button type="button" class="stepper-btn stepper-decrease" data-target="open_themes_limit">−</button>
+                                                        <input type="number" min="1" max="50" step="1" id="open_themes_limit" class="number-input-stepper">
+                                                        <button type="button" class="stepper-btn stepper-increase" data-target="open_themes_limit">+</button>
+                                                        <span class="stepper-label" data-i18n="btn_batch_unit">тем</span>
+                                                    </div>
+                                                    <p class="setting-hint" data-i18n="hint_batch">Ограничение количества одновременно открываемых вкладок</p>
+                                                </div>
+
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label" data-i18n="btn_pinned_lbl">"Закреплённые темы"</span>
+                                                        <span class="toggle-description" data-i18n="btn_pinned_desc">Показать кнопку открытия закреплённых тем</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="toolbar_button_pinned" checked>
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label" data-i18n="btn_read_all_lbl">"Пометить все темы прочитанными"</span>
+                                                        <span class="toggle-description" data-i18n="btn_read_all_desc">Показать кнопку массовой пометки тем</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="toolbar_button_read_all" checked>
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+                    <div class="settings-card">
+                                            <div class="card-header">
+                                                <h3 class="card-title" data-i18n="card_open_topics">Открытие тем</h3>
+                                                <p class="card-description" data-i18n="card_open_topics_desc">Как открывать темы при клике</p>
+                                            </div>
+                                            <div class="card-content">
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label" data-i18n="open_hide_popup">Скрывать попап после открытия темы</span>
+                                                        <span class="toggle-description" data-i18n="tdesc_hide_popup">Автоматически закрывать попап расширения по клику и открывать новую вкладку</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="toolbar_open_theme_hide">
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label" data-i18n="open_current_tab">Открывать ссылки в текущей вкладке</span>
+                                                        <span class="toggle-description" data-i18n="tdesc_current_tab">Темы, QMS и упоминания будут открываться в текущей вкладке вместо новых вкладок. Удобно для последовательного чтения без накопления вкладок.</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="open_in_current_tab">
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label" data-i18n="open_new_tab_foreground">Открывать новые вкладки на переднем плане</span>
+                                                        <span class="toggle-description" data-i18n="tdesc_new_tab_foreground">Если ссылка открывается в новой вкладке, сразу переключаться на неё. Работает, когда отключено открытие в текущей вкладке.</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="open_new_tab_foreground">
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label" data-i18n="open_compact">Упрощённый вид списка тем</span>
+                                                        <span class="toggle-description" data-i18n="tdesc_compact">Компактное отображение без деталей</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="toolbar_simple_list">
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+                </section>
+                <section class="content-section" id="appearance">
+                    <h2 class="section-title">🎨 Внешний вид</h2>
+                    <p class="section-description">Тема, цвет акцента, иконки и шрифт</p>
+                    <div class="settings-card">
+                                            <div class="card-header">
+                                                <h3 class="card-title" data-i18n="card_theme">Цветовая схема</h3>
+                                                <p class="card-description" data-i18n="card_theme_desc">Выберите светлую или тёмную тему</p>
+                                            </div>
+                                            <div class="card-content">
+                                                <fieldset id="theme_mode" class="radio-group">
+                                                    <label class="radio-card">
+                                                        <input type="radio" name="theme_mode" value="light" checked>
+                                                        <span class="radio-content">
+                                                            <span class="radio-title" data-i18n="theme_light">☀️ Светлая</span>
+                                                            <span class="radio-description" data-i18n="theme_light_desc">Классический светлый интерфейс</span>
+                                                        </span>
+                                                    </label>
+                                                    <label class="radio-card">
+                                                        <input type="radio" name="theme_mode" value="dark">
+                                                        <span class="radio-content">
+                                                            <span class="radio-title" data-i18n="theme_dark">🌙 Тёмная</span>
+                                                            <span class="radio-description" data-i18n="theme_dark_desc">Для комфорта глаз в темноте</span>
+                                                        </span>
+                                                    </label>
+                                                    <label class="radio-card">
+                                                        <input type="radio" name="theme_mode" value="auto">
+                                                        <span class="radio-content">
+                                                            <span class="radio-title" data-i18n="theme_auto">🌓 Авто</span>
+                                                            <span class="radio-description" data-i18n="theme_auto_desc">Следовать за системной темой</span>
+                                                        </span>
+                                                    </label>
+                                                    <label class="radio-card liquid-glass-card">
+                                                        <input type="radio" name="theme_mode" value="liquid-glass">
+                                                        <span class="radio-content">
+                                                            <span class="radio-title" data-i18n="theme_glass">✨ Liquid Glass</span>
+                                                            <span class="radio-description" data-i18n="theme_glass_desc">Стеклянный эффект с размытием и переливами — максимально стильно</span>
+                                                        </span>
+                                                    </label>
+                                                    <label class="radio-card cosmic-pulse-card">
+                                                        <input type="radio" name="theme_mode" value="cosmic">
+                                                        <span class="radio-content">
+                                                            <span class="radio-title" data-i18n="theme_cosmic">🌌 Cosmic Pulse</span>
+                                                            <span class="radio-description" data-i18n="theme_cosmic_desc">Космический неоновый стиль — глубокий тёмный фон с циановым свечением</span>
+                                                        </span>
+                                                    </label>
+                                                    <label class="radio-card aurora-glass-card">
+                                                        <input type="radio" name="theme_mode" value="aurora-glass">
+                                                        <span class="radio-content">
+                                                            <span class="radio-title" data-i18n="theme_aurora">🌠 Aurora Glass</span>
+                                                            <span class="radio-description" data-i18n="theme_aurora_desc">Премиальный стеклянный стиль с северным сиянием, глубиной и мягким свечением</span>
+                                                        </span>
+                                                    </label>
+                                                </fieldset>
+                                            </div>
+                                        </div>
+                    <div class="settings-card">
+                                            <div class="card-header">
+                                                <h3 class="card-title" data-i18n="card_accent">Цвет акцента</h3>
+                                                <p class="card-description" data-i18n="card_accent_desc">Цвет подсветки активных элементов</p>
+                                            </div>
+                                            <div class="card-content">
+                                                <fieldset id="accent_color" class="radio-group">
+                                                    <label class="radio-card">
+                                                        <input type="radio" name="accent_color" value="blue" checked>
+                                                        <span class="radio-content">
+                                                            <span class="radio-title" data-i18n="accent_blue">🔵 Синий (4PDA)</span>
+                                                            <span class="radio-description" data-i18n="accent_blue_desc">Цвет в стиле форума 4PDA</span>
+                                                        </span>
+                                                    </label>
+                                                    <label class="radio-card">
+                                                        <input type="radio" name="accent_color" value="teal">
+                                                        <span class="radio-content">
+                                                            <span class="radio-title" data-i18n="accent_teal">🩵 Teal (бирюзовый)</span>
+                                                            <span class="radio-description" data-i18n="accent_teal_desc">Свежий бирюзово-зелёный цвет</span>
+                                                        </span>
+                                                    </label>
+                                                    <label class="radio-card">
+                                                        <input type="radio" name="accent_color" value="purple">
+                                                        <span class="radio-content">
+                                                            <span class="radio-title" data-i18n="accent_purple">🟣 Фиолетовый</span>
+                                                            <span class="radio-description" data-i18n="accent_purple_desc">Элегантный и современный</span>
+                                                        </span>
+                                                    </label>
+                                                    <label class="radio-card">
+                                                        <input type="radio" name="accent_color" value="orange">
+                                                        <span class="radio-content">
+                                                            <span class="radio-title" data-i18n="accent_orange">🟠 Оранжевый</span>
+                                                            <span class="radio-description" data-i18n="accent_orange_desc">Тёплый и позитивный</span>
+                                                        </span>
+                                                    </label>
+                                                </fieldset>
+                                            </div>
+                                        </div>
+                    <div class="settings-card">
+                                            <div class="card-header">
+                                                <h3 class="card-title" data-i18n="card_icons">Иконки</h3>
+                                                <p class="card-description" data-i18n="card_icons_desc">Иконки в списке тем — стандартные, эмодзи по категориям или свой иконопак</p>
+                                            </div>
+                                            <div class="card-content">
+                                                <!-- Icon Pack Selector -->
+                                                <div class="icon-pack-section" style="margin-bottom:14px;">
+                                                    <div class="toggle-info" style="margin-bottom:12px;">
+                                                        <span class="toggle-label" data-i18n="icon_pack_lbl">Иконопак</span>
+                                                        <span class="toggle-description" data-i18n="icon_pack_desc">Иконка слева от названия темы</span>
+                                                    </div>
+                                                    <fieldset id="icon_pack" class="radio-group" style="display:flex;flex-direction:column;gap:8px;border:none;padding:0;margin:0;width:100%;">
+                                                        <label class="radio-card">
+                                                            <input type="radio" name="icon_pack" value="default" checked>
+                                                            <span class="radio-content"><span class="radio-title">📄 Стандартный</span><span class="radio-desc">— одинаковая иконка у всех</span></span>
+                                                        </label>
+                                                        <label class="radio-card">
+                                                            <input type="radio" name="icon_pack" value="emoji">
+                                                            <span class="radio-content"><span class="radio-title">🎨 Эмодзи</span><span class="radio-desc">— автоподбор по названию темы</span></span>
+                                                        </label>
+                                                        <label class="radio-card">
+                                                            <input type="radio" name="icon_pack" value="neon">
+                                                            <span class="radio-content"><span class="radio-title">💠 4Pulse Lucent</span><span class="radio-desc">— компактные glass/SVG-иконки</span></span>
+                                                        </label>
+                                                        <label class="radio-card">
+                                                            <input type="radio" name="icon_pack" value="custom">
+                                                            <span class="radio-content"><span class="radio-title">🖼️ Свой иконопак</span><span class="radio-desc">— ваши иконки + эмодзи-фоллбэк</span></span>
+                                                        </label>
+                                                    </fieldset>
+                                                </div>
+
+                                                <!-- Custom Icon Pack Editor (shown only when pack=custom) -->
+                                                <div id="custom-icon-pack-section" style="display:none;border-top:1px solid var(--border);padding-top:12px;">
+                                                    <div class="toggle-info" style="margin-bottom:8px;">
+                                                        <span class="toggle-label">Свой иконопак</span>
+                                                        <span class="toggle-description">Ключевое слово → эмодзи или URL картинки. Если слово найдено в названии темы — покажем вашу иконку.</span>
+                                                    </div>
+
+                                                    <!-- Existing entries -->
+                                                    <div id="custom-icon-entries" style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px;"></div>
+
+                                                    <!-- Add new entry -->
+                                                    <div style="display:flex;gap:6px;align-items:center;margin-bottom:10px;">
+                                                        <input type="text" id="icon-add-keyword" placeholder="Ключевое слово" style="flex:1;padding:6px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-secondary);color:var(--text);font-size:12px;">
+                                                        <input type="text" id="icon-add-value" placeholder="🍎 или URL картинки" style="flex:1;padding:6px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-secondary);color:var(--text);font-size:12px;">
+                                                        <button id="icon-add-btn" class="interactive" style="padding:6px 12px;border-radius:var(--radius-sm);background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;">+ Добавить</button>
+                                                    </div>
+
+                                                    <!-- Import/Export -->
+                                                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                                                        <label style="padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border-md);background:var(--bg-3);color:var(--text);font-size:11px;cursor:pointer;">
+                                                            📥 Импорт JSON
+                                                            <input type="file" id="icon-pack-import" accept=".json" style="display:none;">
+                                                        </label>
+                                                        <button id="icon-pack-export" style="padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border-md);background:var(--bg-3);color:var(--text);font-size:11px;cursor:pointer;">📤 Экспорт JSON</button>
+                                                        <button id="icon-pack-clear" style="padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border-md);background:transparent;color:var(--text-3);font-size:11px;cursor:pointer;">🗑 Очистить</button>
+                                                    </div>
+                                                </div>
+
+                                                <!-- B&W toggle -->
+                                                <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:14px;">
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label" data-i18n="icons_bw">Чёрно-белые иконки</span>
+                                                        <span class="toggle-description" data-i18n="tdesc_bw_icons">Убрать цвет с эмодзи-иконок для минималистичного вида</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="bw_icons">
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                    <div class="settings-card">
+                                            <div class="card-header">
+                                                <h3 class="card-title" data-i18n="card_font">Шрифт интерфейса</h3>
+                                                <p class="card-description" data-i18n="card_font_desc">Выберите шрифт с хорошей читаемостью кириллицы</p>
+                                            </div>
+                                            <div class="card-content">
+                                                <div class="setting-group">
+                                                    <select id="font-family" class="setting-select">
+                                                        <option value="system">System Default (рекомендуется)</option>
+                                                        <option value="inter">Inter — современный, геометричный</option>
+                                                        <option value="roboto">Roboto — чёткий, универсальный</option>
+                                                        <option value="open-sans">Open Sans — мягкий, нейтральный</option>
+                                                        <option value="pt-sans">PT Sans — для кириллицы</option>
+                                                        <option value="ubuntu">Ubuntu — округлый, дружелюбный</option>
+                                                        <option value="noto-sans">Noto Sans — строгий, деловой</option>
+                                                        <option value="source-sans">Source Sans Pro — элегантный</option>
+                                                        <option value="verdana">Verdana — классический, широкий</option>
+                                                        <option value="comfortaa">Comfortaa — плавный, закругленный</option>
+                                                        <option value="nunito">Nunito — мягкий, читаемый</option>
+                                                        <option value="manrope">Manrope — минималистичный</option>
+                                                        <option value="rubik">Rubik — округлый, современный</option>
+                                                        <option value="montserrat">Montserrat — популярный, универсальный</option>
+                                                        <option value="jetbrains-mono">JetBrains Mono — моноширинный, для кода</option>
+                                                        <option value="golos-text">Golos Text — аккуратный, отлично для кириллицы</option>
+                                                        <option value="wix-madefor">Wix Madefor Text — современный, плотный, читаемый</option>
+                                                        <option value="commissioner">Commissioner — технологичный, выразительный</option>
+                                                        <option value="ibm-plex-sans">IBM Plex Sans — профессиональный, строгий</option>
+                                                        <option value="bricolage">Bricolage Grotesque — выразительный, дизайнерский</option>
+                                                        <option value="onest">Onest — современный, технологичный</option>
+                                                        <option value="geologica">Geologica — геометричный, стильный</option>
+                                                    </select>
+
+                                                    <div class="font-preview">
+                                                        <p class="preview-latin">The quick brown fox jumps over the lazy dog</p>
+                                                        <p class="preview-cyrillic">Съешь ещё этих мягких французских булок, да выпей же чаю</p>
+                                                        <p class="preview-app">4Pulse — твой пульс форума 4PDA в реальном времени</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                    <div class="settings-card">
+                                            <div class="card-header">
+                                                <h3 class="card-title" data-i18n="card_size">Размер и интервалы</h3>
+                                                <p class="card-description" data-i18n="card_size_desc">Настройте комфортный размер текста</p>
+                                            </div>
+                                            <div class="card-content">
+                                                <!-- Font Size -->
+                                                <div class="setting-group">
+                                                    <label class="setting-label" data-i18n="size_font_lbl">Размер шрифта</label>
+                                                    <div class="size-buttons">
+                                                        <button class="size-btn" data-size="xs" type="button">
+                                                            <span class="size-label">XS</span>
+                                                            <span class="size-value">12px</span>
+                                                        </button>
+                                                        <button class="size-btn" data-size="small" type="button">
+                                                            <span class="size-label">S</span>
+                                                            <span class="size-value">14px</span>
+                                                        </button>
+                                                        <button class="size-btn active" data-size="medium" type="button">
+                                                            <span class="size-label">M</span>
+                                                            <span class="size-value">16px</span>
+                                                        </button>
+                                                        <button class="size-btn" data-size="large" type="button">
+                                                            <span class="size-label">L</span>
+                                                            <span class="size-value">18px</span>
+                                                        </button>
+                                                        <button class="size-btn" data-size="xl" type="button">
+                                                            <span class="size-label">XL</span>
+                                                            <span class="size-value">20px</span>
+                                                        </button>
+                                                        <button class="size-btn" data-size="xxl" type="button">
+                                                            <span class="size-label">XXL</span>
+                                                            <span class="size-value">22px</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Line Height -->
+                                                <div class="setting-group">
+                                                    <label class="setting-label">
+                                                        <span data-i18n="size_spacing_lbl">Межстрочный интервал</span>
+                                                        <span class="setting-value" id="line-height-value">1.5</span>
+                                                    </label>
+                                                    <div class="slider-container">
+                                                        <input type="range" id="line-height" class="slider" min="1.2" max="2.0" step="0.1" value="1.5">
+                                                        <div class="slider-labels">
+                                                            <span data-i18n="size_narrow">Узкий</span>
+                                                            <span data-i18n="size_normal">Обычный</span>
+                                                            <span data-i18n="size_wide">Широкий</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                </section>
+                <section class="content-section" id="radio">
+                    <h2 class="section-title">🎵 Радио</h2>
+                    <p class="section-description">Встроенный плеер — слушай радио прямо в расширении</p>
+                    <div class="settings-card">
+                                            <div class="card-header">
+                                                <h3 class="card-title" data-i18n="card_radio">Радио</h3>
+                                                <p class="card-description" data-i18n="card_radio_desc">Слушай радио прямо в расширении — не прерывается при смене вкладок</p>
+                                            </div>
+                                            <div class="card-content">
+                                                <label class="toggle-setting">
+                                                    <div class="toggle-info">
+                                                        <span class="toggle-label" data-i18n="radio_enable">🎵 Включить радиоплеер</span>
+                                                        <span class="toggle-description" data-i18n="radio_enable_desc">Показывает мини-плеер в попапе и сайдбаре</span>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" id="radio_enabled">
+                                                        <span class="toggle-slider"></span>
+                                                    </div>
+                                                </label>
+                                                <!-- Radio Player UI -->
+                                                <div id="radio_player_section" style="display:none; margin-top:8px;">
+                                                    <!-- Now Playing row -->
+                                                    <div style="display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border);">
+                                                        <span id="radio_current_station_name" style="flex:1; font-size:13px; font-weight:500; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" data-i18n="radio_no_station">Станция не выбрана</span>
+                                                        <button id="radio_play_btn" class="interactive" style="background:var(--accent);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;" title="Play/Pause">
+                                                            <span id="radio_play_icon" style="color:#fff;font-size:14px;line-height:1;">▶</span>
+                                                        </button>
+                                                    </div>
+                                                    <!-- Volume -->
+                                                    <div style="display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border);">
+                                                        <svg class="icon" style="width:16px;height:16px;flex-shrink:0;"><use href="#icon-bell"></use></svg>
+                                                        <input type="range" id="radio_volume_slider" min="0" max="100" value="70" style="flex:1;">
+                                                        <span id="radio_volume_label" style="font-size:12px;min-width:34px;text-align:right;color:var(--text-3);">70%</span>
+                                                    </div>
+                                                    <!-- Station selector -->
+                                                    <div style="padding:10px 0; border-bottom:1px solid var(--border);">
+                                                        <div class="setting-label" data-i18n="radio_station_lbl" style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Радиостанция</div>
+                                                        <select id="radio_station_select" style="width:100%;padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-secondary);color:var(--text);font-size:13px;cursor:pointer;">
+                                                            <option value="" data-i18n="radio_select_station">— Выберите станцию —</option>
+                                                        </select>
+                                                    </div>
+                                                    <!-- Search -->
+                                                    <div style="padding:10px 0; border-bottom:1px solid var(--border);">
+                                                        <div style="display:flex; gap:8px;">
+                                                            <input type="text" id="radio_search_input" placeholder="Поиск по Radio Browser API..."
+                                                                style="flex:1;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-secondary);color:var(--text);font-size:13px;">
+                                                            <button id="radio_search_btn" class="interactive" style="padding:7px 14px;border-radius:var(--radius-sm);background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:500;" data-i18n="radio_search_btn">Найти</button>
+                                                        </div>
+                                                        <div id="radio_search_results" style="display:none;margin-top:6px;max-height:200px;overflow-y:auto;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-secondary);"></div>
+                                                    </div>
+                                                    <!-- Custom station add -->
+                                                    <details style="padding:10px 0; border-bottom:1px solid var(--border);">
+                                                        <summary style="cursor:pointer;font-size:13px;color:var(--text-3);list-style:none;display:flex;align-items:center;gap:6px;" data-i18n="radio_custom_add">+ Добавить свою станцию</summary>
+                                                        <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+                                                            <input type="text" id="radio_custom_name" placeholder="Название станции"
+                                                                style="padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-secondary);color:var(--text);font-size:13px;">
+                                                            <input type="text" id="radio_custom_url" placeholder="URL потока (mp3/aac/ogg...)"
+                                                                style="padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-secondary);color:var(--text);font-size:13px;">
+                                                            <button id="radio_custom_add_btn" class="interactive" style="padding:7px 14px;border-radius:var(--radius-sm);background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:13px;" data-i18n="radio_custom_add_btn">Добавить</button>
+                                                        </div>
+                                                    </details>
+                                                    <!-- Delete custom -->
+                                                    <div style="padding:10px 0;">
+                                                        <button id="radio_delete_custom_btn" class="interactive" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);background:transparent;color:var(--text-3);border:1px solid var(--border);cursor:pointer;" data-i18n="radio_delete_custom">🗑 Удалить пользовательские станции</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                </section>
+                <section class="content-section" id="sync">
+                    <h2 class="section-title">⏱ Синхронизация</h2>
+                    <p class="section-description">Как часто проверять обновления на форуме</p>
+                    <div class="settings-card" id="foundation-card">
+                                            <div class="card-header">
+                                                <h3 class="card-title" data-i18n="profiles_title">🧱 Профили и стабильность</h3>
+                                                <p class="card-description" data-i18n="profiles_desc">Готовые режимы интерфейса, стабильная работа и резервные копии настроек.</p>
+                                            </div>
+                                            <div class="card-content">
+                                                <div class="toggle-info" style="margin-bottom:10px;">
+                                                    <span class="toggle-label" data-i18n="profile_usage">Профиль использования</span>
+                                                    <span class="toggle-description" data-i18n="profile_usage_desc">Быстро перестраивает интерфейс под обычного пользователя, модератора, минимальный режим или радио.</span>
+                                                </div>
+                                                <div id="active-profile-banner" class="profile-active-banner" aria-live="polite">
+                                                    <span class="profile-active-label" data-i18n="active_profile">Активный профиль</span>
+                                                    <strong id="active-profile-name">—</strong>
+                                                    <span id="active-profile-desc" data-i18n="active_profile_choose">Выберите режим ниже.</span>
+                                                </div>
+                                                <div class="profile-actions" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:14px;">
+                                                    <button type="button" class="btn-secondary profile-btn" data-apply-profile="standard" data-profile-title="👤 Обычный" data-profile-desc="QMS, избранное, ответы и закладки. Тикеты и радио выключены." data-i18n="profile_standard">👤 Обычный</button>
+                                                    <button type="button" class="btn-secondary profile-btn" data-apply-profile="moderator" data-profile-title="🛡️ Модератор" data-profile-desc="Добавляет тикеты, модераторские уведомления и режим открытия списков в расширении." data-i18n="profile_moderator">🛡️ Модератор</button>
+                                                    <button type="button" class="btn-secondary profile-btn" data-apply-profile="minimal" data-profile-title="🧘 Минимализм" data-profile-desc="Компактная статистика без радио и лишних кнопок. Уведомления из тем можно открыть прямо внутри 4Pulse по нажатию на счётчик." data-i18n="profile_minimal">🧘 Минимализм</button>
+                                                    <button type="button" class="btn-secondary profile-btn" data-apply-profile="radio" data-profile-title="📻 Радио" data-profile-desc="Включает радиоплеер в popup/sidebar, компактную статистику и оставляет форумные списки доступными." data-i18n="profile_radio">📻 Радио</button>
+                                                </div>
+                                                <div id="profile-effect-hint" class="profile-effect-hint">
+                                                    <span data-i18n="profile_hint"><b>Что меняет профиль:</b> режим включает/выключает связанные блоки настроек. Например, «Радио» включает радиоплеер, но не запускает музыку автоматически — запуск остаётся по кнопке Play.</span>
+                                                </div>
+                                                <label class="toggle-setting"><div class="toggle-info"><span class="toggle-label" data-i18n="stable_mode_lbl">Стабильный режим</span><span class="toggle-description" data-i18n="stable_mode_desc">Отключает экспериментальные блоки и оставляет только ядро.</span></div><div class="toggle-switch"><input type="checkbox" id="stable_mode"><span class="toggle-slider"></span></div></label>
+                                                <label class="toggle-setting"><div class="toggle-info"><span class="toggle-label" data-i18n="silent_doctor_lbl">Тихий доктор</span><span class="toggle-description" data-i18n="silent_doctor_desc">Автоматически восстанавливает polling, WebSocket keep-alive и мягко перезапускает проверку при сбоях.</span></div><div class="toggle-switch"><input type="checkbox" id="silent_doctor_enabled"><span class="toggle-slider"></span></div></label>
+                                                <!-- Автокопии удалены — используйте Экспорт/Импорт ниже -->
+                                                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+                                                    <button type="button" class="btn-secondary" id="foundation-run-doctor" data-i18n="doctor_now">🩺 Проверить сейчас</button>
+                                                </div>
+                                                <div id="foundation-status" style="margin-top:10px;font-size:12px;color:var(--text-3);"></div>
+                                            </div>
+                                        </div>
+                    <div class="settings-card">
+                        <div class="card-header">
+                            <h3 class="card-title" data-i18n="card_frequency">Частота обновления</h3>
+                            <p class="card-description" data-i18n="card_frequency_desc">Более частые обновления увеличивают нагрузку на сервер</p>
+                        </div>
+                        <div class="card-content">
+                            <div class="slider-container">
+                                <div class="slider-wrapper">
+                                    <input type="range" id="interval" class="slider" min="0" max="10" step="1">
+                                    <div class="slider-value" id="interval_output">30 сек</div>
+                                </div>
+                                <p class="setting-hint" data-i18n="hint_interval">Рекомендуется: 30 секунд или больше. Слишком частые запросы могут привести к временной блокировке (error 429).
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <section class="content-section" id="system">
+                    <h2 class="section-title">⚙️ Система</h2>
+                    <p class="section-description">Язык интерфейса и резервная копия настроек</p>
+                    <div class="settings-card" id="language-card">
+                                            <div class="card-header">
+                                                <h3 class="card-title" data-i18n="card_language">🌐 Язык интерфейса</h3>
+                                                <p class="card-description" data-i18n="card_language_desc">Выберите язык для всех надписей расширения</p>
+                                            </div>
+                                            <div class="card-content">
+                                                <fieldset id="ui_language" class="radio-group">
+                                                    <label class="radio-card">
+                                                        <input type="radio" name="ui_language" value="ru">
+                                                        <span class="radio-content">
+                                                            <span class="radio-title">🇷🇺 Русский</span>
+                                                        </span>
+                                                    </label>
+                                                    <label class="radio-card">
+                                                        <input type="radio" name="ui_language" value="en">
+                                                        <span class="radio-content">
+                                                            <span class="radio-title">🇬🇧 English</span>
+                                                        </span>
+                                                    </label>
+                                                    <label class="radio-card">
+                                                        <input type="radio" name="ui_language" value="de">
+                                                        <span class="radio-content">
+                                                            <span class="radio-title">🇩🇪 Deutsch</span>
+                                                        </span>
+                                                    </label>
+                                                    <label class="radio-card">
+                                                        <input type="radio" name="ui_language" value="uk">
+                                                        <span class="radio-content">
+                                                            <span class="radio-title">🇺🇦 Українська</span>
+                                                        </span>
+                                                    </label>
+                                                </fieldset>
+                                            </div>
+                                        </div>
+                    <div class="settings-card">
+                        <div class="card-header">
+                            <h3 class="card-title">💾 Резервная копия</h3>
+                            <p class="card-description">Экспортируй все настройки в JSON и восстанавливай из файла</p>
+                        </div>
+                        <div class="card-content">
+                            <div class="setting-row" style="display:flex; align-items:center; justify-content:space-between; padding:12px 0 4px; border-top:1px solid var(--border);">
+                                                            <div class="toggle-info">
+                                                                <span class="toggle-label">Ширина окна</span>
+                                                                <span class="toggle-description">Изменяет ширину попапа 4Pulse (320–600 px)</span>
+                                                            </div>
+                                                            <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                                                                <label id="popup_width_auto_wrap" style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;color:var(--text-2);white-space:nowrap;">
+                                                                    <input type="checkbox" id="popup_width_auto" style="cursor:pointer;accent-color:var(--accent);">
+                                                                    Авто
+                                                                </label>
+                                                                <input type="range" id="popup_width" min="320" max="600" step="10" value="360"
+                                                                       style="width:100px; cursor:pointer;">
+                                                                <span id="popup_width_label" style="font-size:12px; color:var(--text-2); min-width:38px; text-align:right;">360px</span>
+                                                            </div>
+                                                        </div>
+
+                                                        <!-- 💾 Резервная копия настроек (файл на компьютер) -->
+                                                        <div class="setting-row" style="border-top:1px solid var(--border); padding-top:14px; margin-top:4px;">
+                                                            <div class="toggle-info" style="margin-bottom:10px;">
+                                                                <span class="toggle-label">💾 Резервная копия настроек</span>
+                                                                <span class="toggle-description">Экспорт сохраняет настройки в JSON-файл на ваш компьютер. Импорт восстанавливает их из файла.</span>
+                                                            </div>
+                                                            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                                                                <button id="btn-export-settings" class="btn-secondary" style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;font-size:13px;">
+                                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                                                    Скачать резервную копию
+                                                                </button>
+                                                                <label id="btn-import-settings" class="btn-secondary" style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;font-size:13px;cursor:pointer;">
+                                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 5 17 10"/><line x1="12" y1="5" x2="12" y2="15"/></svg>
+                                                                    Загрузить из файла
+                                                                    <input type="file" id="import-file" accept=".json" style="display:none;">
+                                                                </label>
+                                                            </div>
+                                                            <p id="settings-io-status" style="font-size:11px;color:var(--text-3);padding:4px 0 0;min-height:14px;margin:0;"></p>
+                                                        </div>
+                        </div>
+                    </div>
+                </section>
+                <section class="content-section" id="diagnostics">
+                    <h2 class="section-title" data-i18n="diagnostics_title">🩺 Диагностика</h2>
+                    <p class="section-description" data-i18n="diagnostics_desc">Состояние подключения, журнал событий и системный отчёт</p>
+
+                    <div class="settings-card diagnostics-card">
+                        <div class="card-header">
+                            <h3 class="card-title" data-i18n="diagnostics_quick_title">🔬 Быстрая проверка</h3>
+                            <p class="card-description" data-i18n="diagnostics_quick_desc">Нажмите кнопку, чтобы получить актуальный снимок состояния background-части расширения.</p>
+                        </div>
+                        <div class="card-content">
+                            <div class="diagnostics-actions">
+                                <button id="diagnostics-run" class="diagnostics-btn primary" type="button" data-i18n="diagnostics_run">Запустить диагностику</button>
+                                <button id="diagnostics-copy" class="diagnostics-btn" type="button" disabled data-i18n="diagnostics_copy">Скопировать отчёт</button>
+                                <button id="diagnostics-clear-log" class="diagnostics-btn danger" type="button" data-i18n="diagnostics_clear">Очистить журнал</button>
+                                <button id="diagnostics-self-heal" class="diagnostics-btn wow" type="button" data-i18n="diagnostics_repair">⚡ Починить 4Pulse</button>
+                            </div>
+
+                            <div id="diagnostics-status" class="diagnostics-status muted" data-i18n="diagnostics_not_run">Диагностика ещё не запускалась.</div>
+                            <div id="diagnostics-summary" data-no-i18n="1" class="diagnostics-summary" style="display:none;">
+                                <div class="diagnostics-tile"><span class="diag-label" data-i18n="diag_health">Здоровье</span><strong id="diag-health">—</strong></div>
+                                <div class="diagnostics-tile"><span class="diag-label" data-i18n="diag_auth">Авторизация</span><strong id="diag-auth">—</strong></div>
+                                <div class="diagnostics-tile"><span class="diag-label">WebSocket</span><strong id="diag-ws">—</strong></div>
+                                <div class="diagnostics-tile"><span class="diag-label" data-i18n="diag_events">События</span><strong id="diag-total">—</strong></div>
+                                <div class="diagnostics-tile"><span class="diag-label" data-i18n="diag_bookmarks">Закладки</span><strong id="diag-bookmarks">—</strong></div>
+                                <div class="diagnostics-tile"><span class="diag-label" data-i18n="diag_radio">Радио</span><strong id="diag-radio">—</strong></div>
+                                <div class="diagnostics-tile"><span class="diag-label">Polling</span><strong id="diag-polling">—</strong></div>
+                                <div class="diagnostics-tile"><span class="diag-label" data-i18n="diag_log">Журнал</span><strong id="diag-log">—</strong></div>
+                            </div>
+                            <div id="diagnostics-insights" data-no-i18n="1" class="diagnostics-insights" style="display:none;"></div>
+                            <pre id="diagnostics-report" data-no-i18n="1" class="diagnostics-report" style="display:none;"></pre>
+                        </div>
+                    </div>
+
+                </section>
+                <section class="content-section" id="about">
+                    <h2 class="section-title" data-i18n="sec_about">ℹ️ О расширении</h2>
+                    <p class="section-description" data-i18n="sec_about_desc">Версия, разработчик и обратная связь</p>
+
+                    <div class="settings-card">
+                        <div class="card-content about-content">
+                            <div class="about-logo">
+                                <img src="../img/icons/icon_128.png" alt="4Pulse Logo" class="logo-image">
+                            </div>
+                            <div class="about-info">
+                                <h3 class="about-title">4Pulse</h3>
+                                <p class="about-version" id="about-version-tap" title="Нажмите несколько раз..." data-i18n-version-prefix="about_version_prefix">Версия 1.9.1</p>
+                                <p id="tickets-unlock-hint" style="display:none;font-size:11px;color:var(--text-3);margin-top:4px;"></p>
+                                <p class="about-description" data-i18n="about_description">
+                                    4Pulse — твой личный пульс форума 4PDA.
+                                    Компактный режим, динамичность и мгновенные уведомления.
+                                </p>
+                                <div class="about-links">
+                                    <a href="https://4pda.to/forum/index.php?showtopic=1121899" target="_blank" class="about-link" data-i18n="about_forum_topic">
+                                        Тема на форуме
+                                    </a>
+                                    <a href="https://github.com/BrantX-dev/4Pulse" target="_blank" class="about-link">
+                                        GitHub
+                                    </a>
+                                </div>
+
+
+                            </div>
+                        </div>
+                    </div>
+
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <script src="i18n-data.js"></script>
+    <script src="options.release.js"></script>
+</body>
+</html>
