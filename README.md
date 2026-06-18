@@ -1,26 +1,105 @@
-# 4Pulse 🛰️
-### Advanced UI & UX Enhancement for 4PDA
+# 4Pulse
 
-Modern, sleek, and functional browser extension with **Liquid Glass** design.
+Расширение для форума 4PDA с поддержкой Firefox и Chromium-браузеров.
 
----
+## Возможности
 
-## 📸 Screenshots
-<p align="center">
-  <img src="screenshots/chat.png" width="800" alt="4Pulse Interface">
-</p>
+- уведомления о новых сообщениях, темах и упоминаниях;
+- QMS, избранное, тикеты и навигация;
+- встроенное радио;
+- светлая и тёмная темы;
+- профили интерфейса;
+- настройка плиток, внешнего вида и поведения;
+- отдельные сборки для Firefox и Chrome / Edge.
 
----
+## Структура проекта
 
-## ✨ Что нового в 1.8 🚀
-* **Custom Iconpacks:** Полная поддержка пользовательских иконок через JSON.
-* **Advanced Tile Layout:** Перетаскивание и скрытие плиток (QMS, Избранное, Радио).
-* **Typography Engine:** Тонкая настройка размеров (от XS до XXL) и межстрочного интервала.
-* **Liquid Glass UI:** Ultra-modern frosted glass interface with adaptive gradients.
-* **Stability:** Логика мигания переведена на UI-контекст для максимальной надежности.
+- `src/common` — общий код для Firefox и Chrome;
+- `src/firefox` — Firefox manifest и background;
+- `src/chrome` — Chrome manifest, service worker, offscreen и сетевые правила;
+- `scripts/build.mjs` — сборочный скрипт;
+- `dist/firefox` — готовая Firefox-сборка;
+- `dist/chrome` — готовая Chrome-сборка.
 
-## 🛠️ Installation
-1. Download the repository as a ZIP.
-2. Open Firefox and go to `about:debugging`.
-3. Click **"This Firefox"** -> **"Load Temporary Add-on"**.
-4. Select `manifest.json` from the source folder.
+## Сборка
+
+Обе версии:
+
+```bash
+npm run build
+```
+
+Только Firefox:
+
+```bash
+npm run build:firefox
+```
+
+Только Chrome:
+
+```bash
+npm run build:chrome
+```
+
+## Установка для тестирования
+
+### Firefox
+
+1. Собрать Firefox-версию:
+
+```bash
+npm run build:firefox
+```
+
+2. Открыть в Firefox:
+
+```text
+about:debugging
+```
+
+3. Выбрать **This Firefox**.
+4. Нажать **Load Temporary Add-on**.
+5. Выбрать файл:
+
+```text
+dist/firefox/manifest.json
+```
+
+### Chrome / Edge
+
+1. Собрать Chromium-версию:
+
+```bash
+npm run build:chrome
+```
+
+2. Открыть:
+
+```text
+chrome://extensions
+```
+
+или:
+
+```text
+edge://extensions
+```
+
+3. Включить режим разработчика.
+4. Нажать **Load unpacked**.
+5. Выбрать папку:
+
+```text
+dist/chrome
+```
+
+## Готовые пакеты
+
+Готовые версии для установки публикуются в разделе **Releases**:
+
+- Firefox — `.xpi`;
+- Chrome / Edge — `.zip`.
+
+## Текущая версия
+
+`1.9.1`
