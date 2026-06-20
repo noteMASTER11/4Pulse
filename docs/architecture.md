@@ -53,6 +53,14 @@ src/common/js/
   `features/context-menu/service.js`;
 - имена alarm-событий, polling/backoff schedule и alarm dispatch сосредоточены в
   `features/alarms/service.js`; платформы инжектируют только radio keepalive.
+- radio cookie/CORS guard вынесен в `features/radio/cookie-guard.js`; Chrome MV3 может полагаться на
+  declarativeNetRequest-правила, а Firefox использует общий webRequest-guard.
+- health/event log и глобальные JS error handlers вынесены в `features/diagnostics/event-log.js` и
+  `features/diagnostics/error-handlers.js`; background больше не хранит буфер логов вручную.
+- diagnostics snapshot, storage/alarm integrity и popup health envelope находятся в
+  `features/diagnostics/snapshot.js`, поэтому background отвечает только за передачу runtime-зависимостей.
+- lookup/cache аватаров авторов, извлечение аватара из HTML профиля и fallback для открытых вкладок находятся в
+  `features/avatar/service.js`; message-router получает готовые use cases через dependency injection.
 
 Следующий крупный этап — восстановить редактируемые исходники UI вместо
 минифицированных `*.release.js`, после чего разделить popup/sidebar/options на

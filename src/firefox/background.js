@@ -1,4 +1,4 @@
-/** @typedef {import('./js/types.js').Settings} Settings */
+﻿/** @typedef {import('./js/types.js').Settings} Settings */
 /** @typedef {import('./js/types.js').DiagnosticsSnapshot} DiagnosticsSnapshot */
 /** @typedef {import('./js/types.js').AppState} AppState */
 // background.js - Chrome Extension MV3 Service Worker
@@ -15,12 +15,6 @@ import {
     normalizeRadioRecordImage,
     normalizeRadioUrl,
 } from "./js/features/radio/metadata.js";
-import {
-    buildAttentionCenter,
-    buildFavoritesCleanup,
-    buildMorningDigest,
-    buildSmartInsights,
-} from "./js/features/diagnostics/insights.js";
 import { createRadioMessageRouter } from "./js/features/radio/messages.js";
 import { createFoundationMessageRouter } from "./js/features/foundation/messages.js";
 import { FOUNDATION_BACKUP_KEYS, getFoundationProfile } from "./js/features/foundation/profiles.js";
@@ -28,111 +22,21 @@ import { createBookmarkMessageRouter } from "./js/features/bookmarks/messages.js
 import { createTicketMessageRouter } from "./js/features/tickets/messages.js";
 import { createSmileyMessageRouter } from "./js/features/smileys/messages.js";
 import { createAvatarMessageRouter } from "./js/features/avatar/messages.js";
+import { createAvatarLookupService } from "./js/features/avatar/service.js";
 import { createNavigationMessageRouter } from "./js/features/navigation/messages.js";
 import { createPopupMessageRouter } from "./js/features/popup/messages.js";
 import { createContentMessageRouter } from "./js/features/content/messages.js";
 import { createFavoritesPortHandler } from "./js/features/favorites/ports.js";
 import { createContextMenuService } from "./js/features/context-menu/service.js";
 import { ALARM_NAMES, calculatePollingSchedule, createBackgroundAlarmHandler, shouldEnableTicketQuickPoll } from "./js/features/alarms/service.js";
+import { registerRadioCookieGuard } from "./js/features/radio/cookie-guard.js";
+import { registerGlobalErrorHandlers } from "./js/features/diagnostics/error-handlers.js";
+import { createEventLogService } from "./js/features/diagnostics/event-log.js";
+import { createDiagnosticsSnapshotService } from "./js/features/diagnostics/snapshot.js";
 
 // 🛡️ Global error handlers
-self.addEventListener('unhandledrejection', (event) => {
-    console.error('🚨 Unhandled promise rejection:', {
-        reason: event.reason,
-        promise: event.promise
-    });
-    event.preventDefault(); // Prevent extension crash
-    try { addEventLog('error', 'Unhandled promise rejection', 'error', { reason: String(event.reason?.message || event.reason || '') }); } catch (_) {}
-});
+// Global error handlers are registered after the event log service is created.
 
-self.addEventListener('error', (event) => {
-    console.error('🚨 Global error:', {
-        message: event.message,
-        filename: event.filename,
-        lineno: event.lineno,
-        colno: event.colno,
-        error: event.error
-    });
-    try { addEventLog('error', 'Global JS error', 'error', { message: String(event.message || ''), filename: event.filename || '', lineno: event.lineno || 0 }); } catch (_) {}
-});
-
-
-// ──────────────────────────────────────────────────────────────
-// 🎵 Radio cookie/CORS guard
-// ──────────────────────────────────────────────────────────────
-// Firefox warns about third-party cookies like "hssuid" on radio stream hosts.
-// 4Pulse does not need cookies for radio streams or radio metadata, so strip them
-// for all known stream domains. 4PDA cookies are NOT touched.
-const RADIO_COOKIE_GUARD_HOSTS = [
-    'hostingradio.ru',
-    'radiorecord.hostingradio.ru',
-    'rusradio.hostingradio.ru',
-    'dfm.hostingradio.ru',
-    'dfm-dfmrusdance.hostingradio.ru',
-    'maximum.hostingradio.ru',
-    'nashe1.hostingradio.ru',
-    'nrj-nrjkaz.hostingradio.ru',
-    'chanson.hostingradio.ru',
-    'ep256.hostingradio.ru',
-    'retro.hostingradio.ru',
-    'rs.kartina.tv',
-    'kartina.tv',
-    'icecast-vgtrk.cdnvideo.ru',
-    'icecast.luxfm.kz',
-    'icecast.ns.kz',
-    'online.hitfm.ua',
-    'online.kissfm.ua',
-    'online.radioroks.ua',
-];
-
-const RADIO_COOKIE_GUARD_URLS = [...new Set(
-    RADIO_COOKIE_GUARD_HOSTS.flatMap(host => [`*://${host}/*`, `*://*.${host}/*`])
-)];
-
-function isRadioCookieGuardUrl(url = '') {
-    try {
-        const host = new URL(String(url)).hostname.toLowerCase();
-        return RADIO_COOKIE_GUARD_HOSTS.some(h => host === h || host.endsWith('.' + h));
-    } catch (_) {
-        return false;
-    }
-}
-
-function registerRadioCookieGuard() {
-    try {
-        if (!chrome.webRequest?.onBeforeSendHeaders || !chrome.webRequest?.onHeadersReceived) return;
-        if (globalThis.__4pulseRadioCookieGuardRegistered) return;
-        globalThis.__4pulseRadioCookieGuardRegistered = true;
-
-        chrome.webRequest.onBeforeSendHeaders.addListener(
-            details => {
-                if (!isRadioCookieGuardUrl(details.url)) return {};
-                const requestHeaders = (details.requestHeaders || []).filter(h => {
-                    const name = String(h.name || '').toLowerCase();
-                    return name !== 'cookie' && name !== 'authorization';
-                });
-                return { requestHeaders };
-            },
-            { urls: RADIO_COOKIE_GUARD_URLS },
-            ['blocking', 'requestHeaders']
-        );
-
-        chrome.webRequest.onHeadersReceived.addListener(
-            details => {
-                if (!isRadioCookieGuardUrl(details.url)) return {};
-                const responseHeaders = (details.responseHeaders || []).filter(h => {
-                    const name = String(h.name || '').toLowerCase();
-                    return name !== 'set-cookie' && name !== 'set-cookie2';
-                });
-                return { responseHeaders };
-            },
-            { urls: RADIO_COOKIE_GUARD_URLS },
-            ['blocking', 'responseHeaders']
-        );
-    } catch (e) {
-        try { console.warn('[Radio] cookie guard unavailable:', e?.message || e); } catch (_) {}
-    }
-}
 
 registerRadioCookieGuard();
 
@@ -154,46 +58,17 @@ function debugWarn(...args) { if (DEBUG()) console.warn(...args); }
 // ════════════════════════════════════════════════════════
 // 🩺 4Pulse Health & Event Log
 // ════════════════════════════════════════════════════════
-const EVENT_LOG_LIMIT = 80;
-let eventLogBuffer = [];
-let eventLogClearedAt = 0;
+const eventLog = createEventLogService({ storage: chrome.storage.local });
+const addEventLog = eventLog.add;
+const loadEventLog = eventLog.load;
+const clearEventLog = eventLog.clear;
+
 let lastUpdateStartedAt = 0;
 let lastUpdateFinishedAt = 0;
 let lastUpdateOk = false;
 let lastUpdateError = '';
 
-function addEventLog(type, message, level = 'info', details = {}) {
-    try {
-        const item = {
-            ts: Date.now(),
-            type: String(type || 'event'),
-            level: String(level || 'info'),
-            message: String(message || ''),
-            details: details && typeof details === 'object' ? details : {}
-        };
-        if (eventLogClearedAt && item.ts <= eventLogClearedAt) return;
-        eventLogBuffer = eventLogBuffer.filter(ev => !eventLogClearedAt || (ev.ts || 0) > eventLogClearedAt);
-        eventLogBuffer.unshift(item);
-        if (eventLogBuffer.length > EVENT_LOG_LIMIT) eventLogBuffer.length = EVENT_LOG_LIMIT;
-        chrome.storage.local.set({ event_log_cache: eventLogBuffer, event_log_cleared_at: eventLogClearedAt }).catch(()=>{});
-    } catch (_) {}
-}
-
-async function loadEventLog() {
-    try {
-        const s = await chrome.storage.local.get(['event_log_cache', 'event_log_cleared_at']);
-        eventLogClearedAt = Number(s.event_log_cleared_at || 0);
-        const rawLog = Array.isArray(s.event_log_cache) ? s.event_log_cache : [];
-        eventLogBuffer = rawLog.filter(ev => !eventLogClearedAt || (ev.ts || 0) > eventLogClearedAt).slice(0, EVENT_LOG_LIMIT);
-    } catch (_) { eventLogBuffer = []; }
-}
-
-async function clearEventLog() {
-    eventLogClearedAt = Date.now();
-    eventLogBuffer = [];
-    await chrome.storage.local.set({ event_log_cache: [], event_log_cleared_at: eventLogClearedAt });
-    return { ok: true, clearedAt: eventLogClearedAt };
-}
+registerGlobalErrorHandlers({ target: self, addEventLog });
 
 // 🧱 4Pulse 2.0 Foundation helpers
 async function foundationCreateBackup(manual = false) {
@@ -1087,400 +962,31 @@ const contextMenuService = createContextMenuService({
 });
 async function createContextMenus() { return contextMenuService.refresh(); }
 
-async function collectStorageIntegrity() {
-    const result = { ok: true, issues: [], staleKeys: [], quotaWarning: false, keys: 0 };
-    try {
-        const all = await chrome.storage.local.get(null);
-        result.keys = Object.keys(all || {}).length;
-        const expected = {
-            bm_cache: 'array', bm_deleted_ids: 'array', bm_renamed_map: 'object', bm_collapsed_folders: 'array',
-            qms_cache: 'array', mentions_cache: 'array', tickets_cache: 'array', radio_history: 'array',
-            tiles_row_config: 'object', visible_user_avatar_map: 'object'
-        };
-        for (const [key, type] of Object.entries(expected)) {
-            if (!(key in all)) continue;
-            const value = all[key];
-            const ok = type === 'array' ? Array.isArray(value) : value && typeof value === type && !Array.isArray(value);
-            if (!ok) result.issues.push(`${key}: invalid ${type}`);
-        }
-        for (const key of Object.keys(all)) {
-            if (/^(old_|legacy_|tmp_|debug_|backup_legacy)/i.test(key)) result.staleKeys.push(key);
-        }
-        if (chrome.storage.local.getBytesInUse) {
-            const bytes = await chrome.storage.local.getBytesInUse(null).catch(() => 0);
-            result.bytesInUse = bytes;
-            result.quotaWarning = bytes > 4.5 * 1024 * 1024;
-            if (result.quotaWarning) result.issues.push('storage quota warning');
-        }
-        result.ok = result.issues.length === 0;
-    } catch (e) {
-        result.ok = false;
-        result.issues.push(String(e?.message || e));
-    }
-    return result;
-}
-
-async function collectAlarmIntegrity(now = Date.now()) {
-    const result = { ok: true, issues: [], total: 0, duplicates: [], expired: [] };
-    try {
-        const alarms = await chrome.alarms.getAll();
-        result.total = alarms.length;
-        const seen = new Set();
-        for (const alarm of alarms) {
-            if (seen.has(alarm.name)) result.duplicates.push(alarm.name);
-            seen.add(alarm.name);
-            if (alarm.scheduledTime && alarm.scheduledTime < now - 60_000) result.expired.push(alarm.name);
-        }
-        if (result.duplicates.length) result.issues.push('alarm duplicates: ' + result.duplicates.join(', '));
-        if (result.expired.length) result.issues.push('expired alarms: ' + result.expired.join(', '));
-        result.ok = result.issues.length === 0;
-    } catch (e) {
-        result.ok = false;
-        result.issues.push(String(e?.message || e));
-    }
-    return result;
-}
-
-async function getDiagnosticsSnapshot() {
-    let bmCache = [];
-    let bmDeletedIds = [];
-    let bmRenamedMap = {};
-    let bmCollapsedFolders = [];
-
-    try {
-        const stored = await chrome.storage.local.get([
-            'bm_cache',
-            'bm_deleted_ids',
-            'bm_renamed_map',
-            'bm_collapsed_folders'
-        ]);
-        bmCache = Array.isArray(stored.bm_cache) ? stored.bm_cache : [];
-        bmDeletedIds = Array.isArray(stored.bm_deleted_ids) ? stored.bm_deleted_ids : [];
-        bmRenamedMap = stored.bm_renamed_map && typeof stored.bm_renamed_map === 'object' ? stored.bm_renamed_map : {};
-        bmCollapsedFolders = Array.isArray(stored.bm_collapsed_folders) ? stored.bm_collapsed_folders : [];
-    } catch (e) {
-        debugWarn('[Diagnostics] bookmarks storage read failed:', e);
-    }
-
-    let alarmInfo = null;
-    let backoffInfo = {};
-    let httpHealth = {};
-    const storageIntegrity = await collectStorageIntegrity();
-    const alarmIntegrity = await collectAlarmIntegrity(Date.now());
-    try { alarmInfo = await chrome.alarms.get(ALARM_NAME); } catch (_) {}
-    try {
-        backoffInfo = await chrome.storage.local.get(['backoff_multiplier', 'backoff_until', 'is_429_active', 'last_429_time', 'auto_mode_active']);
-        httpHealth = await chrome.storage.local.get(['fetcher_last_success_at','fetcher_last_error_at','fetcher_last_error']);
-    } catch (_) { backoffInfo = {}; }
-
-    const liveBookmarks = Array.isArray(bg.bookmarks) ? bg.bookmarks : [];
-    const activeBookmarks = liveBookmarks.filter(b => !b.deleted);
-    const folders = activeBookmarks.filter(b => b.isFolder);
-    const links = activeBookmarks.filter(b => !b.isFolder);
-    const countsForHealth = {
-        qms: bg.qms?.count || 0,
-        favorites: bg.favorites?.count || 0,
-        mentions: bg.mentions?.count || 0,
-        tickets: SETTINGS.tickets_enabled ? (bg.tickets?.count || 0) : 0,
-    };
-    const totalForHealth = countsForHealth.qms + countsForHealth.favorites + countsForHealth.mentions + countsForHealth.tickets;
-    const now = Date.now();
-    const healthIssues = [];
-    if (!bg.user_id) healthIssues.push('Нет авторизации');
-    if (!bg.wsConnected) healthIssues.push('WebSocket offline');
-    if (backoffInfo.is_429_active) healthIssues.push('Активна защита 429');
-    if (lastUpdateFinishedAt && !lastUpdateOk) healthIssues.push('Последнее обновление с ошибкой');
-    if (!alarmInfo) healthIssues.push('Polling alarm не найден');
-    if (!storageIntegrity.ok) healthIssues.push('Проблемы целостности storage');
-    if (!alarmIntegrity.ok) healthIssues.push('Проблемы chrome.alarms');
-    if (httpHealth.fetcher_last_success_at && now - Number(httpHealth.fetcher_last_success_at) > 60*60*1000) healthIssues.push('HTTP давно не отвечал успешно');
-
-    const snapshot = {
-        ok: true,
-        version: chrome.runtime.getManifest()?.version || '',
-        authorized: !!bg.user_id,
-        user_id: bg.user_id || null,
-        wsConnected: !!bg.wsConnected,
-        health: {
-            status: healthIssues.length ? 'warning' : 'ok',
-            issues: healthIssues,
-            lastUpdateStartedAt,
-            lastUpdateFinishedAt,
-            lastUpdateAgeSec: lastUpdateFinishedAt ? Math.round((now - lastUpdateFinishedAt) / 1000) : null,
-            lastUpdateOk,
-            lastUpdateError,
-            totalEvents: totalForHealth,
-            polling: {
-                exists: !!alarmInfo,
-                scheduledTime: alarmInfo?.scheduledTime || null,
-                scheduledInSec: alarmInfo?.scheduledTime ? Math.max(0, Math.round((alarmInfo.scheduledTime - now) / 1000)) : null,
-                periodMinutes: alarmInfo?.periodInMinutes || null,
-                backoffMultiplier: backoffInfo.backoff_multiplier || 1,
-                backoffUntil: backoffInfo.backoff_until || null,
-                is429Active: !!backoffInfo.is_429_active,
-                last429Time: backoffInfo.last_429_time || null,
-                autoModeActive: !!backoffInfo.auto_mode_active
-            },
-            http: {
-                lastSuccessAt: httpHealth.fetcher_last_success_at || null,
-                lastSuccessAgeSec: httpHealth.fetcher_last_success_at ? Math.round((now - Number(httpHealth.fetcher_last_success_at)) / 1000) : null,
-                lastErrorAt: httpHealth.fetcher_last_error_at || null,
-                lastError: httpHealth.fetcher_last_error || ''
-            },
-            storageIntegrity,
-            alarmIntegrity
-        },
-        eventLog: eventLogBuffer.slice(0, 50),
-        counts: countsForHealth,
-        bookmarks: {
-            enabled: !!SETTINGS.show_bookmarks_tab,
-            loaded: liveBookmarks.length > 0,
-            total: liveBookmarks.length,
-            active: activeBookmarks.length,
-            links: links.length,
-            folders: folders.length,
-            deletedLocal: bmDeletedIds.length,
-            renamedLocal: Object.keys(bmRenamedMap).length,
-            collapsedFolders: bmCollapsedFolders.length,
-            cacheRows: bmCache.length,
-            sample: activeBookmarks.slice(0, 5).map(b => ({
-                id: b.id,
-                title: b.title,
-                isFolder: !!b.isFolder,
-                parentId: b.parentId,
-                url: b.url || ''
-            }))
-        },
-        radio: getRadioPublicState(),
-        settings: {
-            interval: SETTINGS.interval,
-            tickets_enabled: !!SETTINGS.tickets_enabled,
-            tickets_unlocked: !!SETTINGS.tickets_unlocked,
-            bookmarks_enabled: !!SETTINGS.show_bookmarks_tab,
-            dnd_enabled: !!SETTINGS.dnd_enabled,
-            dnd_allow_qms: !!SETTINGS.dnd_allow_qms,
-            dnd_allow_mentions: !!SETTINGS.dnd_allow_mentions,
-            dnd_allow_tickets: !!SETTINGS.dnd_allow_tickets,
-            dnd_mute_radio: !!SETTINGS.dnd_mute_radio,
-            attention_center_enabled: !!SETTINGS.attention_center_enabled,
-            attention_center_mode: SETTINGS.attention_center_mode || 'full',
-            user_profile_mode: SETTINGS.user_profile_mode || 'standard',
-            stable_mode: !!SETTINGS.stable_mode,
-            silent_doctor_enabled: !!SETTINGS.silent_doctor_enabled,
-            auto_backup_enabled: !!SETTINGS.auto_backup_enabled,
-            theme_mode: SETTINGS.theme_mode,
-        },
-        ts: Date.now(),
-    };
-    snapshot.smartInsights = buildSmartInsights(snapshot);
-    snapshot.eventLog = eventLogBuffer.filter(ev => !eventLogClearedAt || (ev.ts || 0) > eventLogClearedAt).slice(0, 50);
-    return snapshot;
-}
-// ════════════════════════════════════════════════════════
-// 🎯 Attention Center + Comfort Pack 1.8.8
-// ════════════════════════════════════════════════════════
-function buildPopupEnvelope() {
-    const data = bg.popup_data;
-    data.attention = buildAttentionCenter(data);
-    data.morning_digest = buildMorningDigest(data);
-    data.favorites_cleanup = buildFavoritesCleanup(data);
-    data.health_compact = {
-        wsConnected: !!bg.wsConnected,
-        lastUpdateOk,
+const diagnosticsSnapshotService = createDiagnosticsSnapshotService({
+    api: chrome,
+    settings: SETTINGS,
+    bg,
+    eventLog,
+    getRadioPublicState,
+    alarmName: ALARM_NAME,
+    debugWarn,
+    getUpdateHealth: () => ({
+        lastUpdateStartedAt,
         lastUpdateFinishedAt,
-        issues: [!bg.wsConnected ? 'WebSocket offline' : '', lastUpdateFinishedAt && !lastUpdateOk ? 'Последнее обновление с ошибкой' : ''].filter(Boolean)
-    };
-    return data;
-}
-
-
-async function getAvatarFromOpen4pdaTabs() {
-    try {
-        const hasTabsPermission = await chrome.permissions?.contains?.({ permissions: ['tabs'] }).catch(() => false);
-        if (!hasTabsPermission) return '';
-
-        const tabs = await chrome.tabs.query({ url: ['https://4pda.to/forum/index.php*'] });
-        // Сначала профиль текущего пользователя, потом любые страницы 4PDA.
-        const uid = String(bg.user_id || '');
-        tabs.sort((a, b) => {
-            const au = a.url || '', bu = b.url || '';
-            return (bu.includes('showuser=' + uid) ? 1 : 0) - (au.includes('showuser=' + uid) ? 1 : 0);
-        });
-        for (const tab of tabs) {
-            // 1) Быстрый путь: если content-script уже внедрён, спрашиваем его.
-            try {
-                const res = await chrome.tabs.sendMessage(tab.id, { action: 'user_avatar_from_page' });
-                if (res?.user_avatar_url) return res.user_avatar_url;
-            } catch (_) {}
-
-            // 2) Надёжный путь для уже открытых вкладок после переустановки расширения:
-            // content-script мог не быть внедрён, поэтому выполняем разовый DOM-сборщик.
-            try {
-                const injected = await chrome.scripting.executeScript({
-                    target: { tabId: tab.id },
-                    args: [uid, String(bg.user_name || '')],
-                    func: (userId, userName) => {
-                        const abs = (u) => {
-                            if (!u) return '';
-                            u = String(u).trim().replace(/&amp;/g, '&');
-                            if (u.startsWith('//')) return 'https:' + u;
-                            if (u.startsWith('/')) return 'https://4pda.to' + u;
-                            return /^https?:\/\//i.test(u) ? u : '';
-                        };
-                        const badUrl = (u) => /(?:blank|spacer|transparent|pixel|default|no[_-]?avatar|empty|placeholder|favicon|sprite|button)/i.test(String(u || ''));
-                        const scoreImg = (img) => {
-                            if (!img) return null;
-                            const url = abs(img.currentSrc || img.src || img.getAttribute('data-src') || img.getAttribute('data-original') || '');
-                            if (!url || badUrl(url)) return null;
-                            const ctx = ((img.alt || '') + ' ' + (img.title || '') + ' ' + (img.className || '') + ' ' + (img.closest('.photo,.user-box,.profile,.avatar')?.className || '')).toLowerCase();
-                            let score = 0;
-                            if (img.closest('.user-box .photo')) score += 120;
-                            if (img.closest('.photo')) score += 80;
-                            if (/аватар|avatar|photo|userpic/.test(ctx)) score += 50;
-                            if (/\/s\/[^?#]+\.(gif|png|jpe?g|webp)(?:$|[?#])/i.test(url)) score += 45;
-                            if (userName && (img.alt === userName || img.title === userName)) score += 35;
-                            if (userId && location.href.includes('showuser=' + userId)) score += 25;
-                            const w = img.naturalWidth || img.width || 0;
-                            const h = img.naturalHeight || img.height || 0;
-                            if (w >= 48 && h >= 48) score += 20;
-                            if (w && h && (w < 24 || h < 24)) score -= 80;
-                            if (/emoji|smile|rank|group|warn|reputation|badge|logo|icon/i.test(ctx)) score -= 40;
-                            return score > 0 ? { url, score } : null;
-                        };
-                        const preferred = [
-                            '.user-box .photo img',
-                            '.photo img[alt*="Аватар" i]',
-                            '.photo img',
-                            'img[alt*="Аватар" i]',
-                            userName ? `img[title="${CSS.escape(userName)}"]` : '',
-                            userName ? `img[alt="${CSS.escape(userName)}"]` : ''
-                        ].filter(Boolean);
-                        const candidates = [];
-                        for (const sel of preferred) {
-                            try { document.querySelectorAll(sel).forEach(img => { const c = scoreImg(img); if (c) candidates.push(c); }); } catch (_) {}
-                        }
-                        document.querySelectorAll('img').forEach(img => { const c = scoreImg(img); if (c) candidates.push(c); });
-                        candidates.sort((a, b) => b.score - a.score);
-                        return candidates[0]?.url || '';
-                    }
-                });
-                const url = injected?.[0]?.result || '';
-                if (url) return url;
-            } catch (_) {}
-        }
-    } catch (_) {}
-    return '';
-}
-
-async function cacheAvatarUrlAsDataUrl(url) {
-    try {
-        if (!url) return '';
-        if (/^data:image\//i.test(url)) return url;
-        const r = await fetch(url, { credentials: 'include', cache: 'reload' });
-        if (!r.ok) return '';
-        const ct = (r.headers.get('content-type') || '').toLowerCase();
-        if (!ct.startsWith('image/')) return '';
-        const buf = await r.arrayBuffer();
-        if (!buf || buf.byteLength > 512 * 1024) return '';
-        const bytes = new Uint8Array(buf);
-        let binary = '';
-        const chunk = 0x8000;
-        for (let i = 0; i < bytes.length; i += chunk) binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
-        return `data:${ct.split(';')[0]};base64,${btoa(binary)}`;
-    } catch (_) { return ''; }
-}
-const __authorAvatarPending = new Map();
-const __authorAvatarFailedUntil = new Map();
-const AUTHOR_AVATAR_FAILURE_COOLDOWN_MS = 10 * 60 * 1000;
-
-async function lookupAuthorAvatar(userId, userName = '', profileUrl = '') {
-    userId = String(userId || '').trim();
-    userName = String(userName || '').trim();
-    profileUrl = String(profileUrl || '').trim();
-    const idKey = userId ? `id:${userId}` : '';
-    const lookupKey = idKey || (userName ? 'name:' + userName : profileUrl);
-    const now = Date.now();
-
-    if (!lookupKey) return { ok: false, error: 'no_profile_url' };
-
-    const failedUntil = __authorAvatarFailedUntil.get(lookupKey) || 0;
-    if (failedUntil > now) return { ok: false, error: 'avatar_lookup_cooldown' };
-    if (__authorAvatarPending.has(lookupKey)) return __authorAvatarPending.get(lookupKey);
-
-    const promise = (async () => {
-        const cache = await chrome.storage.local.get(['visible_user_avatar_map']).catch(() => ({}));
-        const map = (cache.visible_user_avatar_map && typeof cache.visible_user_avatar_map === 'object') ? cache.visible_user_avatar_map : {};
-        if (idKey && map[idKey]) return { ok: true, avatar: map[idKey], cached: true };
-        if (userName && map[userName]) return { ok: true, avatar: map[userName], cached: true };
-
-        const url = profileUrl || (userId ? `https://4pda.to/forum/index.php?showuser=${userId}` : '');
-        if (!url) return { ok: false, error: 'no_profile_url' };
-
-        try {
-            const r = await fetch(url, { credentials: 'include', cache: 'reload' });
-            if (!r.ok) {
-                __authorAvatarFailedUntil.set(lookupKey, Date.now() + AUTHOR_AVATAR_FAILURE_COOLDOWN_MS);
-                return { ok: false, error: 'profile_http_' + r.status };
-            }
-            const buf = await r.arrayBuffer();
-            const html = new TextDecoder('windows-1251').decode(buf);
-            const abs = (u) => {
-                if (!u) return '';
-                u = String(u).trim().replace(/&amp;/g, '&');
-                if (u.startsWith('//')) return 'https:' + u;
-                if (u.startsWith('/')) return 'https://4pda.to' + u;
-                return /^https?:\/\//i.test(u) ? u : '';
-            };
-            const bad = (u) => /(?:blank|spacer|transparent|pixel|default|no[_-]?avatar|empty|placeholder|favicon|sprite|button|rate|warn|reputation|logo|icon)/i.test(String(u || ''));
-            const candidates = [];
-            const add = (raw, score) => {
-                const u = abs(raw);
-                if (u && !bad(u)) candidates.push({ url: u, score });
-            };
-            let m;
-            m = html.match(/<div[^>]+class=["'][^"']*user-box[^"']*["'][\s\S]*?<div[^>]+class=["'][^"']*photo[^"']*["'][\s\S]*?<img[^>]+src=["']([^"']+)["']/i);
-            if (m) add(m[1], 200);
-            m = html.match(/<div[^>]+class=["'][^"']*photo[^"']*["'][\s\S]*?<img[^>]+src=["']([^"']+)["']/i);
-            if (m) add(m[1], 160);
-            const re = /<img[^>]+(?:src|data-src|data-original)=["']([^"']+)["'][^>]*(?:alt|title)=["']([^"']*)["'][^>]*>/ig;
-            while ((m = re.exec(html))) {
-                const ctx = (m[0] + ' ' + (m[2] || '')).toLowerCase();
-                let score = /аватар|avatar|photo|userpic/.test(ctx) ? 90 : 0;
-                if (/\/s\/[^"']+\.(gif|png|jpe?g|webp)/i.test(m[1])) score += 60;
-                if (userName && ctx.includes(userName.toLowerCase())) score += 40;
-                if (score > 0) add(m[1], score);
-            }
-            candidates.sort((a, b) => b.score - a.score);
-            const avatarUrl = candidates[0]?.url || '';
-            if (!avatarUrl) {
-                __authorAvatarFailedUntil.set(lookupKey, Date.now() + AUTHOR_AVATAR_FAILURE_COOLDOWN_MS);
-                return { ok: false, error: 'avatar_not_found' };
-            }
-            const dataAvatar = await cacheAvatarUrlAsDataUrl(avatarUrl);
-            const avatar = dataAvatar || avatarUrl;
-            if (idKey) map[idKey] = avatar;
-            if (userName) map[userName] = avatar;
-            const mapKeys = Object.keys(map);
-            if (mapKeys.length > 500) {
-                const pruned = {};
-                mapKeys.slice(-500).forEach(k => pruned[k] = map[k]);
-                Object.keys(map).forEach(k => { if (!pruned[k]) delete map[k]; });
-            }
-            await chrome.storage.local.set({ visible_user_avatar_map: map }).catch(() => {});
-            __authorAvatarFailedUntil.delete(lookupKey);
-            return { ok: true, avatar, source: avatarUrl };
-        } catch (e) {
-            __authorAvatarFailedUntil.set(lookupKey, Date.now() + AUTHOR_AVATAR_FAILURE_COOLDOWN_MS);
-            return { ok: false, error: String(e?.message || e) };
-        }
-    })().finally(() => {
-        __authorAvatarPending.delete(lookupKey);
-    });
-
-    __authorAvatarPending.set(lookupKey, promise);
-    return promise;
-}
-
+        lastUpdateOk,
+        lastUpdateError,
+    }),
+});
+const getDiagnosticsSnapshot = diagnosticsSnapshotService.getDiagnosticsSnapshot;
+const buildPopupEnvelope = diagnosticsSnapshotService.buildPopupEnvelope;
+const avatarLookupService = createAvatarLookupService({
+    api: chrome,
+    storage: chrome.storage.local,
+    getCurrentUser: () => ({ userId: bg.user_id, userName: bg.user_name }),
+});
+const getAvatarFromOpen4pdaTabs = avatarLookupService.getAvatarFromOpen4pdaTabs;
+const cacheAvatarUrlAsDataUrl = avatarLookupService.cacheAvatarUrlAsDataUrl;
+const lookupAuthorAvatar = avatarLookupService.lookupAuthorAvatar;
 async function setSmartSilence(minutes = 30, mode = 'focus') {
     const until = Date.now() + Math.max(5, Number(minutes) || 30) * 60 * 1000;
     await chrome.storage.local.set({ smart_silence_until: until, smart_silence_mode: mode });
