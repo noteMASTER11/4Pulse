@@ -61,6 +61,10 @@ src/common/js/
   `features/diagnostics/snapshot.js`, поэтому background отвечает только за передачу runtime-зависимостей.
 - lookup/cache аватаров авторов, извлечение аватара из HTML профиля и fallback для открытых вкладок находятся в
   `features/avatar/service.js`; message-router получает готовые use cases через dependency injection.
+- priority blink state machine находится в `features/badge/priority-blink.js`; background больше не хранит phase/state
+  мигания и только передаёт `setBlinkBadge`/`update_action`.
+- install/startup bootstrap, восстановление radio/blink state и первичная inactive-иконка вынесены в
+  `features/lifecycle/bootstrap.js`.
 
 Следующий крупный этап — восстановить редактируемые исходники UI вместо
 минифицированных `*.release.js`, после чего разделить popup/sidebar/options на

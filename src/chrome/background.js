@@ -28,7 +28,9 @@ import { createPopupMessageRouter } from "./js/features/popup/messages.js";
 import { createContentMessageRouter } from "./js/features/content/messages.js";
 import { createFavoritesPortHandler } from "./js/features/favorites/ports.js";
 import { createContextMenuService } from "./js/features/context-menu/service.js";
+import { registerBackgroundLifecycle } from "./js/features/lifecycle/bootstrap.js";
 import { ALARM_NAMES, calculatePollingSchedule, createBackgroundAlarmHandler, shouldEnableTicketQuickPoll } from "./js/features/alarms/service.js";
+import { createPriorityBlinkService } from "./js/features/badge/priority-blink.js";
 import { registerRadioCookieGuard } from "./js/features/radio/cookie-guard.js";
 import { registerGlobalErrorHandlers } from "./js/features/diagnostics/error-handlers.js";
 import { createEventLogService } from "./js/features/diagnostics/event-log.js";
@@ -815,63 +817,18 @@ globalThis.getNotificationIcon = async function getNotificationIcon(fallbackIcon
     return fallbackIcon;
 };
 
-// ════════════════════════════════════════════════════════
-// 🎯 PRIORITY BLINK — иконка мигает когда есть обновление
-//    в "приоритетной" теме (режим концентрации)
-//    Использует chrome.alarms вместо setInterval —
-//    выживает при перезапуске сервис-воркера MV3
-// ════════════════════════════════════════════════════════
 const BLINK_ALARM = ALARM_NAMES.priorityBlink;
-let _priorityBlinkPhase = false;
-let _priorityBlinking   = false;
-
-async function startPriorityBlink() {
-    if (_priorityBlinking) return;
-    _priorityBlinking = true;
-    _priorityBlinkPhase = false;
-    await chrome.storage.local.set({ priority_blinking: true });
-    // Alarm fires every ~0.7s (minimum 1 min in MV3, so we simulate via storage ping)
-    // For sub-minute blinking we use the onMessage ping from content script / popup
-    // Actual visual blink is driven each time bg wakes (alarm or message)
-    _applyBlinkPhase();
-    chrome.alarms.create(BLINK_ALARM, { periodInMinutes: 1 });
-}
-
-function stopPriorityBlink() {
-    _priorityBlinking = false;
-    chrome.alarms.clear(BLINK_ALARM).catch(() => {});
-    chrome.storage.local.set({ priority_blinking: false }).catch(() => {});
-    // 🔧 FIX: Снимаем blink-блок в browser.js (восстанавливает бейдж из _prevBadgeCount),
-    // затем bg.update_action() делает полный canvas-redraw если нужно.
-    setBlinkBadge(false);
-    bg.update_action();
-}
-
-function _applyBlinkPhase() {
-    if (!_priorityBlinking) return;
-    _priorityBlinkPhase = !_priorityBlinkPhase;
-    // 🔧 FIX: Роутим через setBlinkBadge из browser.js.
-    // Раньше ON-фаза писала напрямую в chrome.action, bypassing очередь дебаунса.
-    // Это приводило к тому, что WS-события перетирали '!!' через 16ms дебаунс.
-    // Теперь setBlinkBadge(true) блокирует очередь до setBlinkBadge(false).
-    setBlinkBadge(_priorityBlinkPhase);
-    // OFF-фаза: setBlinkBadge(false) сам восстанавливает бейдж из _prevBadgeCount.
-    // bg.update_action() вызывать не нужно — это было бы лишним canvas redraw.
-}
-
-// Resume blink state after SW restart
-async function restorePriorityBlinkIfNeeded() {
-    try {
-        const s = await chrome.storage.local.get(['priority_blinking', 'focused_topics']);
-        if (!s.priority_blinking) return;
-        // Only blink if there are still focused unread topics
-        const ft = (s.focused_topics || []).map(String);
-        if (!ft.length) { chrome.storage.local.set({ priority_blinking: false }); return; }
-        _priorityBlinking = true;
-        _applyBlinkPhase();
-        chrome.alarms.create(BLINK_ALARM, { periodInMinutes: 1 });
-    } catch(e) {}
-}
+const priorityBlinkService = createPriorityBlinkService({
+    storage: chrome.storage.local,
+    alarms: chrome.alarms,
+    alarmName: BLINK_ALARM,
+    setBlinkBadge,
+    updateAction: () => bg.update_action(),
+});
+const startPriorityBlink = priorityBlinkService.start;
+const stopPriorityBlink = priorityBlinkService.stop;
+const restorePriorityBlinkIfNeeded = priorityBlinkService.restoreIfNeeded;
+const applyPriorityBlinkPhase = priorityBlinkService.applyBlinkPhase;
 
 globalThis.startPriorityBlink = startPriorityBlink;
 globalThis.stopPriorityBlink  = stopPriorityBlink;
@@ -940,58 +897,21 @@ async function ensureSilentDoctorAlarm() {
     } catch (_) {}
 }
 
-// Initialize alarm on install
-chrome.runtime.onInstalled.addListener(async reason => {
-    loadRadioState();
-    
-    // 🔌 Регистрируем keep-alive будильник для WebSocket (MV3 SW не засыпает)
-    registerWsKeepAlive();
-    
-    // Сразу ставим серую иконку до первого входа
-    chrome.action.setIcon({ path: {
-        16: 'img/icons/icon_19_out.png',
-        19: 'img/icons/icon_19_out.png',
-        32: 'img/icons/icon_19_out.png',
-        48: 'img/icons/icon_19_out.png'
-    }});
-    
-    createContextMenus();
-    
-    // Initialize alarm immediately
-    await ensureSilentDoctorAlarm();
-    await initializeAlarm();
-    syncTicketQuickPollAlarm();
-    foundationRunDoctor(true).catch(()=>{});
-});
-
-// Reinitialize alarm on browser startup
-chrome.runtime.onStartup.addListener(async () => {
-    syncSettingsFromStorage().catch(()=>{});
-    await loadRadioState();
-    if (radioState.enabled && radioState.isPlaying && radioState.station) {
-        radioPlay(); // ★ FIX: внутри radioPlay вызывается startRadioKeepalive()
-    }
-    restorePriorityBlinkIfNeeded();
-    
-    // 🔌 Переподключаем keep-alive будильник после перезапуска браузера
-    registerWsKeepAlive();
-    
-    // Ставим серую иконку сразу при старте браузера, до первого запроса
-    chrome.action.setIcon({ path: {
-        16: 'img/icons/icon_19_out.png',
-        19: 'img/icons/icon_19_out.png',
-        32: 'img/icons/icon_19_out.png',
-        48: 'img/icons/icon_19_out.png'
-    }});
-    createContextMenus();
-    
-    // Восстанавливаем авторежим: alarm создаётся всегда — он управляет фоновым обновлением
-    // auto_mode_active в storage используется только для popup-polling
-    const stored = await chrome.storage.local.get(['auto_mode_active']);
-    await ensureSilentDoctorAlarm();
-    await initializeAlarm();
-    syncTicketQuickPollAlarm();
-    foundationRunDoctor(true).catch(()=>{});
+registerBackgroundLifecycle({
+    runtime: chrome.runtime,
+    action: chrome.action,
+    storage: chrome.storage.local,
+    loadRadioState,
+    getRadioState: () => radioState,
+    radioPlay,
+    restorePriorityBlink: restorePriorityBlinkIfNeeded,
+    registerWsKeepAlive,
+    createContextMenus,
+    ensureSilentDoctorAlarm,
+    initializeAlarm,
+    syncTicketQuickPollAlarm,
+    foundationRunDoctor,
+    syncSettingsFromStorage,
 });
 
 // Function to create/update the alarm with current backoff multiplier
@@ -1078,7 +998,7 @@ async function keepRadioAliveAlarm() {
 const handleBackgroundAlarm = createBackgroundAlarmHandler({
     queryIdle: seconds => new Promise(resolve => chrome.idle.queryState(seconds, resolve)),
     update: force => bg.update(force),
-    applyBlinkPhase: _applyBlinkPhase,
+    applyBlinkPhase: applyPriorityBlinkPhase,
     loadTicketState: () => chrome.storage.local.get(['tickets_enabled', 'tickets_unlocked']),
     syncTicketQuickPoll: syncTicketQuickPollAlarm,
     updateTickets: force => bg.tickets.update(force),
