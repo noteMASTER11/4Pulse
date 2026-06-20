@@ -103,3 +103,22 @@ dist/chrome
 ## Текущая версия
 
 `1.9.1`
+
+## Разработка
+
+Проверить код и обе сборки:
+
+```bash
+npm install
+npm run check
+```
+
+Запустить Chromium с загруженным расширением и сразу открыть popup:
+
+```bash
+npm run setup:browser
+npm run dev
+```
+
+Подробности: [`docs/development.md`](docs/development.md). План модульной
+архитектуры: [`docs/architecture.md`](docs/architecture.md).

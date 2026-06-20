@@ -1,6 +1,6 @@
 import { open_url } from '../browser.js';
 import { AbstractEntity } from './abstract.js';
-import { SETTINGS } from '../cs.js'
+import { SETTINGS } from '../config/settings.js';
 
 
 
