@@ -14,10 +14,11 @@ import { Tickets } from "./e/tickets.js";
 import { History } from "./e/history.js";
 import { print_count, print_logout, print_unavailable } from "./browser.js";
 import { createWsClient, WsEventType } from "./ws.js";
+import { initializeSettingsDefaults, SETTINGS } from "./config/settings.js";
 
 const PARSE_APPBK_REGEXP = /u\d+:\d+:\d+:(\d+)/;
 
-export let SETTINGS = {
+initializeSettingsDefaults({
     notification_qms_level: 10,
     notification_themes_level: 10,
     notification_mentions_level: 20,
@@ -94,7 +95,9 @@ export let SETTINGS = {
     silent_doctor_enabled: true,         // тихое автовосстановление polling/ws/cookie-state
     auto_backup_enabled: true,           // хранить последние автокопии настроек
     // 🔀 Tiles row config handled separately via tiles_row_config key (not in SETTINGS)
-}
+});
+
+export { SETTINGS } from "./config/settings.js";
 
 // Helper function to wait/sleep
 function sleep(ms) {

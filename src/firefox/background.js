@@ -7,6 +7,33 @@ import {open_url, setBlinkBadge} from './js/browser.js';
 import {getLogDatetime, fetch4} from "./js/utils.js";
 import { fetchWithRetry, fetchText } from "./js/fetcher.js";
 import {registerWsKeepAlive} from "./js/ws.js";
+import {
+    canFetchRadioMetadata,
+    canPollIcyMetadata,
+    isRadioRecordStream,
+    matchRadioRecordStation,
+    normalizeRadioRecordImage,
+    normalizeRadioUrl,
+} from "./js/features/radio/metadata.js";
+import {
+    buildAttentionCenter,
+    buildFavoritesCleanup,
+    buildMorningDigest,
+    buildSmartInsights,
+} from "./js/features/diagnostics/insights.js";
+import { createRadioMessageRouter } from "./js/features/radio/messages.js";
+import { createFoundationMessageRouter } from "./js/features/foundation/messages.js";
+import { FOUNDATION_BACKUP_KEYS, getFoundationProfile } from "./js/features/foundation/profiles.js";
+import { createBookmarkMessageRouter } from "./js/features/bookmarks/messages.js";
+import { createTicketMessageRouter } from "./js/features/tickets/messages.js";
+import { createSmileyMessageRouter } from "./js/features/smileys/messages.js";
+import { createAvatarMessageRouter } from "./js/features/avatar/messages.js";
+import { createNavigationMessageRouter } from "./js/features/navigation/messages.js";
+import { createPopupMessageRouter } from "./js/features/popup/messages.js";
+import { createContentMessageRouter } from "./js/features/content/messages.js";
+import { createFavoritesPortHandler } from "./js/features/favorites/ports.js";
+import { createContextMenuService } from "./js/features/context-menu/service.js";
+import { ALARM_NAMES, calculatePollingSchedule, createBackgroundAlarmHandler, shouldEnableTicketQuickPoll } from "./js/features/alarms/service.js";
 
 // 🛡️ Global error handlers
 self.addEventListener('unhandledrejection', (event) => {
@@ -109,9 +136,9 @@ function registerRadioCookieGuard() {
 
 registerRadioCookieGuard();
 
-const ALARM_NAME = 'periodicUpdate';
-const RADIO_KEEPALIVE_ALARM = 'radioKeepalive'; // ★ FIX: держит аудио живым при выгрузке фона
-const TICKET_QUICK_POLL_ALARM = 'ticketQuickPoll'; // Быстрая сверка тикетов без ожидания общего polling
+const ALARM_NAME = ALARM_NAMES.periodicUpdate;
+const RADIO_KEEPALIVE_ALARM = ALARM_NAMES.radioKeepalive;
+const TICKET_QUICK_POLL_ALARM = ALARM_NAMES.ticketQuickPoll;
 /**
  * Интервал HTTP-polling когда WS подключён (минуты).
  * Только редкая сверка состояния — на случай пропущенного push при реконнекте.
@@ -122,59 +149,6 @@ const bg = new CS();
 const DEBUG = () => globalThis.__FOURPULSE_DEBUG__ === true;
 function debugLog(...args) { if (DEBUG()) console.log(...args); }
 function debugWarn(...args) { if (DEBUG()) console.warn(...args); }
-
-
-function normalize4pdaForumUrl(url) {
-    if (!url) return '';
-    url = String(url).trim().replace(/&amp;/g, '&');
-    if (url.startsWith('//')) return 'https:' + url;
-    if (url.startsWith('/')) return 'https://4pda.to' + url;
-    if (/^https?:\/\//i.test(url)) return url;
-    return 'https://4pda.to/forum/' + url.replace(/^\.\//, '');
-}
-
-function directPostFromHref(href) {
-    const url = normalize4pdaForumUrl(href);
-    if (!url) return null;
-    const m = url.match(/(?:[?&](?:p|pid)=|#entry)(\d{5,})/i);
-    if (!m) return null;
-    const postId = m[1];
-    return {
-        post_id: postId,
-        post_url: `https://4pda.to/forum/index.php?act=findpost&pid=${postId}`
-    };
-}
-
-function resolveFavoritePreviewFromFavHtml(html, topicId) {
-    const tid = String(topicId || '').replace(/\D+/g, '');
-    if (!tid || !html) return null;
-    const rows = String(html).split(/<tr\b/i).map((part, i) => i ? '<tr' + part : part);
-    let row = rows.find(r => new RegExp(`showtopic=${tid}(?:\\D|$)`, 'i').test(r));
-    if (!row) {
-        const idx = String(html).search(new RegExp(`showtopic=${tid}(?:\\D|$)`, 'i'));
-        if (idx < 0) return null;
-        row = String(html).slice(Math.max(0, idx - 5000), Math.min(String(html).length, idx + 8000));
-    }
-
-    const hrefs = [];
-    row.replace(/href=["']([^"']+)["']/gi, (_, href) => { hrefs.push(href.replace(/&amp;/g, '&')); return ''; });
-
-    // Сначала берём прямые ссылки на конкретный пост. getnewpost намеренно игнорируем.
-    for (const href of hrefs) {
-        if (/view=getnewpost/i.test(href)) continue;
-        if (/(?:act=findpost|view=findpost|showpost(?:\.php)?|#entry|[?&]p=|[?&]pid=)/i.test(href)) {
-            const direct = directPostFromHref(href);
-            if (direct) return direct;
-        }
-    }
-
-    // Иногда прямой pid лежит не в href, а рядом в html-фрагменте.
-    const m = row.match(/(?:act=findpost[^"'<>]*?pid=|view=findpost[^"'<>]*?[?&]p=|#entry)(\d{5,})/i);
-    if (m) return { post_id: m[1], post_url: `https://4pda.to/forum/index.php?act=findpost&pid=${m[1]}` };
-
-    return null;
-}
-
 
 
 // ════════════════════════════════════════════════════════
@@ -221,40 +195,7 @@ async function clearEventLog() {
     return { ok: true, clearedAt: eventLogClearedAt };
 }
 
-function buildSmartInsights(snapshot) {
-    const insights = [];
-    const counts = snapshot.counts || {};
-    const health = snapshot.health || {};
-    const bookmarks = snapshot.bookmarks || {};
-    const radio = snapshot.radio || {};
-    const total = (counts.qms || 0) + (counts.favorites || 0) + (counts.mentions || 0) + (counts.tickets || 0);
-
-    if (!snapshot.authorized) insights.push({ level: 'danger', title: 'Нет входа на 4PDA', text: 'Расширение не сможет получить QMS, избранное, тикеты и закладки, пока cookie авторизации недоступны.', action: 'Открой 4PDA и войди в аккаунт.', target: 'auth' });
-    if (!snapshot.wsConnected) insights.push({ level: 'warning', title: 'WebSocket offline', text: 'Realtime-события могут приходить с задержкой. Расширение будет опираться на polling.', action: 'Нажми «Починить 4Pulse» или перезапусти расширение.' });
-    if (health.polling && !health.polling.exists) insights.push({ level: 'danger', title: 'Polling alarm не найден', text: 'Фоновая проверка может не запускаться автоматически.', action: 'Нажми «Починить 4Pulse» — alarm будет создан заново.' });
-    if (health.polling && health.polling.is429Active) insights.push({ level: 'warning', title: 'Активна защита 429', text: '4PDA недавно ограничивал частоту запросов. Расширение специально замедляет проверки.', action: 'Не ставь слишком маленький интервал обновления.' });
-    if (bookmarks.enabled && !bookmarks.loaded) insights.push({ level: 'warning', title: 'Закладки не загружены', text: 'Вкладка закладок включена, но в памяти расширения сейчас нет данных.', action: 'Запусти принудительное обновление или проверь WebSocket.' });
-    if (snapshot.settings?.tickets_enabled && (counts.tickets || 0) > 0) insights.push({ level: 'hot', title: 'Есть тикеты', text: 'Найдено тикетов: ' + counts.tickets + '.', action: 'Открой раздел тикетов.', target: 'tickets' });
-    if ((counts.qms || 0) > 0) insights.push({ level: 'info', title: 'Есть новые QMS', text: 'Новых диалогов/сообщений: ' + counts.qms + '.', action: 'Проверь личные сообщения.', target: 'qms' });
-    if (total === 0 && snapshot.authorized && snapshot.wsConnected && (!health.issues || !health.issues.length)) insights.push({ level: 'ok', title: 'Всё спокойно', text: 'Критичных событий нет, авторизация и WebSocket выглядят нормально.', action: 'Можно оставить расширение работать в фоне.' });
-    if (radio.enabled && radio.lastError) insights.push({ level: 'warning', title: 'Ошибка радио', text: radio.lastError, action: 'Смени станцию или перезапусти радио.', target: 'radio' });
-
-    return insights.slice(0, 8);
-}
-
 // 🧱 4Pulse 2.0 Foundation helpers
-const FOUNDATION_BACKUP_KEYS = [
-  'notification_qms_level','notification_themes_level','notification_mentions_level','notification_tickets_level',
-  'toolbar_button_open_all','toolbar_button_pinned','toolbar_button_read_all','toolbar_simple_list','toolbar_default_view',
-  'show_all_favorites','show_all_qms','show_all_mentions','open_themes_limit','open_in_current_tab','open_new_tab_foreground',
-  'bw_icons','mirror_mode','accent_color','theme_mode','compact_mode','show_bookmarks_tab','primary_click_action',
-  'compact_stats','compact_hide_qms','compact_hide_favorites','compact_hide_mentions','compact_only_stats','compact_show_topics','show_fav_toolbar','show_topic_action_buttons',
-  'popup_width','popup_width_auto','max_visible_topics','sound_qms','sound_themes','sound_mentions','sound_tickets','sound_volume',
-  'dnd_enabled','dnd_from','dnd_to','dnd_days','dnd_allow_mentions','dnd_allow_qms','dnd_allow_tickets','dnd_mute_radio',
-  'tickets_enabled','tickets_unlocked','radio_enabled','radio_volume','icon_pack','disable_topic_animations',
-  'attention_center_enabled','attention_center_mode','user_profile_mode','stable_mode','silent_doctor_enabled','auto_backup_enabled'
-];
-
 async function foundationCreateBackup(manual = false) {
   const data = await chrome.storage.local.get(FOUNDATION_BACKUP_KEYS);
   const backup = { id: 'backup_' + Date.now(), created_at: Date.now(), manual: !!manual, version: chrome.runtime.getManifest().version, data };
@@ -280,14 +221,7 @@ async function foundationRestoreLatestBackup() {
 async function foundationApplyProfile(profile) {
   const current = await chrome.storage.local.get(['tickets_unlocked', 'tickets_enabled']);
   const ticketsAllowed = !!current.tickets_unlocked;
-  const profiles = {
-    standard: { title:'Обычный пользователь', values:{ user_profile_mode:'standard', stable_mode:false, tickets_enabled:false, attention_center_enabled:false, compact_stats:false, compact_only_stats:false, compact_show_topics:true, show_fav_toolbar:true, show_topic_action_buttons:true, toolbar_button_open_all:true, toolbar_button_pinned:true, toolbar_button_read_all:true, radio_enabled:false, show_bookmarks_tab:true, primary_click_action:'forum', popup_width_auto:false, dnd_allow_tickets:false } },
-    // Профиль не разблокирует закрытые функции. Тикеты появляются только после отдельной разблокировки доступа.
-    moderator: { title:'Куратор / Модератор', values:{ user_profile_mode:'moderator', stable_mode:false, tickets_enabled:ticketsAllowed, attention_center_enabled:false, compact_stats:false, compact_only_stats:false, compact_show_topics:true, show_fav_toolbar:true, show_topic_action_buttons:true, toolbar_button_open_all:true, toolbar_button_pinned:true, toolbar_button_read_all:true, radio_enabled:false, show_bookmarks_tab:true, primary_click_action:'popup', popup_width_auto:false, notification_tickets_level:ticketsAllowed ? 20 : 0, dnd_allow_tickets:ticketsAllowed } },
-    minimal: { title:'Минимализм', values:{ user_profile_mode:'minimal', stable_mode:true, attention_center_enabled:false, compact_stats:true, compact_only_stats:true, compact_show_topics:true, toolbar_default_view:'collapsed', primary_click_action:'popup', show_fav_toolbar:false, show_topic_action_buttons:false, toolbar_button_open_all:false, toolbar_button_pinned:false, toolbar_button_read_all:false, radio_enabled:false, show_bookmarks_tab:false, tickets_enabled:false, popup_width_auto:false, dnd_allow_tickets:false } },
-    radio: { title:'Радио', values:{ user_profile_mode:'radio', stable_mode:false, attention_center_enabled:false, compact_stats:false, compact_only_stats:false, compact_show_topics:true, show_fav_toolbar:true, show_topic_action_buttons:true, toolbar_button_open_all:true, toolbar_button_pinned:true, toolbar_button_read_all:true, radio_enabled:true, show_bookmarks_tab:true, popup_width_auto:false, dnd_allow_tickets:false } }
-  };
-  const cfg = profiles[profile] || profiles.standard;
+  const cfg = getFoundationProfile(profile, ticketsAllowed);
   await foundationCreateBackup(false).catch(()=>{});
   await chrome.storage.local.set(cfg.values);
   Object.entries(cfg.values).forEach(([k,v]) => { if (k in SETTINGS) SETTINGS[k] = v; });
@@ -306,7 +240,7 @@ async function foundationRunDoctor(auto = false) {
   if (auto && st.silent_doctor_enabled === false) return { ok:true, actions:['disabled'] };
   const alarm = await chrome.alarms.get(ALARM_NAME).catch(()=>null);
   if (!alarm) { initializeAlarm(); actions.push('polling восстановлен'); }
-  const wsAlarm = await chrome.alarms.get('4pulse_ws_keepalive').catch(()=>null);
+  const wsAlarm = await chrome.alarms.get(ALARM_NAMES.wsKeepalive).catch(()=>null);
   if (!wsAlarm) { registerWsKeepAlive(); actions.push('ws keep-alive восстановлен'); }
   if (bg && !bg.wsConnected) { try { bg.update(false); actions.push('мягкий update запущен'); } catch(_){} }
   if (st.is_429_active && st.backoff_until && Date.now() > Number(st.backoff_until)) {
@@ -657,17 +591,6 @@ async function radioSetVolume(pct) {
 let _radioRecordStationsCache = null;
 let _radioRecordStationsCacheTs = 0;
 
-function normalizeRadioUrl(url = '') {
-    return String(url || '')
-        .trim()
-        .replace(/^https?:\/\//i, '')
-        .replace(/^www\./i, '')
-        .replace(/[?#].*$/, '')
-        .replace(/\/+$/, '')
-        .toLowerCase();
-}
-
-
 function getRadioStationKey(url = radioState.station, name = radioState.stationName) {
     const u = normalizeRadioUrl(url);
     const n = String(name || '').trim().toLowerCase();
@@ -702,25 +625,6 @@ function getSafeRadioTrack() {
     };
 }
 
-function isRadioRecordStream(url = '') {
-    const u = String(url || '').toLowerCase();
-    return u.includes('radiorecord') || u.includes('hostingradio.ru/rr_') || u.includes('/rr_');
-}
-
-function canPollIcyMetadata(url = '') {
-    // Direct ICY fetch uses the Icy-MetaData header and usually triggers CORS/preflight.
-    // Keep it opt-in only; known stations should use provider APIs instead.
-    const host = (() => { try { return new URL(url).hostname.toLowerCase(); } catch (_) { return ''; } })();
-    const safeHosts = new Set([
-        // Add hosts here only after confirming they return CORS headers for Icy-MetaData.
-    ]);
-    return safeHosts.has(host);
-}
-
-function canFetchRadioMetadata(url = '') {
-    return isRadioRecordStream(url) || canPollIcyMetadata(url);
-}
-
 async function fetchRadioRecordStations() {
     if (_radioRecordStationsCache && Date.now() - _radioRecordStationsCacheTs < 6 * 60 * 60 * 1000) {
         return _radioRecordStationsCache;
@@ -743,40 +647,6 @@ async function fetchRadioRecordStations() {
     } catch (_) {
         return _radioRecordStationsCache || [];
     }
-}
-
-function normalizeRadioRecordImage(url = '') {
-    const u = String(url || '').trim();
-    if (!u) return '';
-    if (u.startsWith('//')) return 'https:' + u;
-    if (u.startsWith('/')) return 'https://www.radiorecord.ru' + u;
-    return u;
-}
-
-function matchRadioRecordStation(stations, stationUrl = '', stationName = '') {
-    const target = normalizeRadioUrl(stationUrl);
-    if (!target) return null;
-
-    const byUrl = stations.find(st => [st.stream_64, st.stream_128, st.stream_320, st.stream_hls]
-        .filter(Boolean)
-        .some(u => {
-            const n = normalizeRadioUrl(u);
-            return n && (n === target || n.includes(target) || target.includes(n));
-        }));
-    if (byUrl) return byUrl;
-
-    const rr = target.match(/rr_([a-z0-9_\-]+?)(?:\d+)?\.(?:aacp?|mp3|ogg|m3u8)$/i);
-    const prefix = rr?.[1]?.replace(/_$/, '');
-    if (prefix) {
-        const byPrefix = stations.find(st => String(st.prefix || '').toLowerCase() === prefix.toLowerCase());
-        if (byPrefix) return byPrefix;
-    }
-
-    const name = String(stationName || '').toLowerCase().replace(/^.*?радио\s*/i, '').replace(/^radio\s*/i, '').trim();
-    if (name) {
-        return stations.find(st => String(st.title || '').toLowerCase().includes(name) || name.includes(String(st.title || '').toLowerCase())) || null;
-    }
-    return null;
 }
 
 async function fetchRadioRecordMetadata(stationUrl, stationName) {
@@ -915,7 +785,7 @@ async function addToRadioHistory(trackTitle, stationName) {
 }
 
 // ⏱ ICY POLL — опрашиваем поток каждые 20с
-const ICY_POLL_ALARM = 'icyPoll'; // ★ FIX: алармы вместо setInterval (живут при выгрузке фона)
+const ICY_POLL_ALARM = ALARM_NAMES.icyPoll;
 
 function startIcyPolling() {
     stopIcyPolling();
@@ -1142,7 +1012,7 @@ globalThis.getNotificationIcon = async function getNotificationIcon(fallbackIcon
 //    Использует chrome.alarms вместо setInterval —
 //    выживает при перезапуске сервис-воркера MV3
 // ════════════════════════════════════════════════════════
-const BLINK_ALARM = 'priorityBlink';
+const BLINK_ALARM = ALARM_NAMES.priorityBlink;
 let _priorityBlinkPhase = false;
 let _priorityBlinking   = false;
 
@@ -1197,39 +1067,25 @@ async function restorePriorityBlinkIfNeeded() {
 globalThis.startPriorityBlink = startPriorityBlink;
 globalThis.stopPriorityBlink  = stopPriorityBlink;
 
-async function createContextMenus() {
-    // ★ OPT: contextMenus — optional permission, проверяем наличие
-    if (!chrome.contextMenus) return;
-    try {
-        const st = await chrome.storage.local.get(['tickets_enabled','tickets_unlocked','user_profile_mode','ui_language']);
-        const showTickets = !!(st.tickets_unlocked && st.tickets_enabled);
-        const lang = st.ui_language || 'ru';
-        const menuI18n = {
-            ru: { update:'4Pulse: обновить всё', qms:'Открыть QMS', fav:'Открыть избранное', mentions:'Открыть упоминания', tickets:'Открыть тикеты', site:'Открыть 4PDA', auth:'Авторизация / вход на 4PDA', profile:'Мой профиль на 4PDA', options:'Настройки 4Pulse', diagnostics:'Диагностика 4Pulse' },
-            en: { update:'4Pulse: refresh everything', qms:'Open QMS', fav:'Open Favorites', mentions:'Open Mentions', tickets:'Open Tickets', site:'Open 4PDA', auth:'Authorization / sign in to 4PDA', profile:'My 4PDA profile', options:'4Pulse settings', diagnostics:'4Pulse diagnostics' },
-            de: { update:'4Pulse: alles aktualisieren', qms:'QMS öffnen', fav:'Favoriten öffnen', mentions:'Erwähnungen öffnen', tickets:'Tickets öffnen', site:'4PDA öffnen', auth:'Autorisierung / Anmeldung bei 4PDA', profile:'Mein 4PDA-Profil', options:'4Pulse-Einstellungen', diagnostics:'4Pulse-Diagnose' },
-            uk: { update:'4Pulse: оновити все', qms:'Відкрити QMS', fav:'Відкрити обране', mentions:'Відкрити згадки', tickets:'Відкрити тікети', site:'Відкрити 4PDA', auth:'Авторизація / вхід на 4PDA', profile:'Мій профіль на 4PDA', options:'Налаштування 4Pulse', diagnostics:'Діагностика 4Pulse' }
-        };
-        const m = menuI18n[lang] || menuI18n.ru;
-        chrome.contextMenus.removeAll(() => {
-            const base = { contexts: ["action"] };
-            chrome.contextMenus.create({ ...base, id: 'update.all', title: m.update, icons: { '16': 'img/icons/icon_48.png', '32': 'img/icons/icon_48.png' } });
-            chrome.contextMenus.create({ ...base, id: 'open.qms', title: m.qms });
-            chrome.contextMenus.create({ ...base, id: 'open.favorites', title: m.fav });
-            chrome.contextMenus.create({ ...base, id: 'open.mentions', title: m.mentions });
-            if (showTickets) chrome.contextMenus.create({ ...base, id: 'open.tickets', title: m.tickets });
-            chrome.contextMenus.create({ ...base, id: 'sep.auth', type: 'separator' });
-            chrome.contextMenus.create({ ...base, id: 'open.site', title: m.site });
-            chrome.contextMenus.create({ ...base, id: 'open.auth', title: m.auth });
-            chrome.contextMenus.create({ ...base, id: 'open.profile', title: m.profile });
-            chrome.contextMenus.create({ ...base, id: 'sep.settings', type: 'separator' });
-            chrome.contextMenus.create({ ...base, id: 'open.options', title: m.options });
-            chrome.contextMenus.create({ ...base, id: 'open.diagnostics', title: m.diagnostics });
-        });
-    } catch (e) {
-        debugWarn('[4Pulse] context menu init failed:', e);
-    }
-}
+const contextMenuService = createContextMenuService({
+    api: chrome.contextMenus,
+    loadState: () => chrome.storage.local.get(['tickets_enabled', 'tickets_unlocked', 'ui_language']),
+    updateIcons: true,
+    actions: {
+        'update.all': () => { addEventLog('action', 'Контекстное меню: обновить всё', 'info'); return bg.update(true); },
+        'open.qms': () => open_url('https://4pda.to/forum/index.php?act=qms', true, false),
+        'open.favorites': () => open_url('https://4pda.to/forum/index.php?act=fav', true, false),
+        'open.mentions': () => open_url('https://4pda.to/forum/index.php?act=mentions', true, false),
+        'open.tickets': () => open_url('https://4pda.to/forum/index.php?act=ticket', true, false),
+        'open.site': () => open_url('https://4pda.to/forum/', true, false),
+        'open.auth': () => open_url('https://4pda.to/forum/index.php?act=auth', true, false),
+        'open.profile': () => open_url(bg.user_id ? `https://4pda.to/forum/index.php?showuser=${bg.user_id}` : 'https://4pda.to/forum/index.php?act=auth', true, false),
+        'open.options': () => open_url(chrome.runtime.getURL('/html/options.html?section=fourpulse'), true, true),
+        'open.diagnostics': () => open_url(chrome.runtime.getURL('/html/options.html?section=diagnostics#diagnostics'), true, true),
+    },
+    onError: error => debugWarn('[4Pulse] context menu operation failed:', error),
+});
+async function createContextMenus() { return contextMenuService.refresh(); }
 
 async function collectStorageIntegrity() {
     const result = { ok: true, issues: [], staleKeys: [], quotaWarning: false, keys: 0 };
@@ -1423,87 +1279,6 @@ async function getDiagnosticsSnapshot() {
 // ════════════════════════════════════════════════════════
 // 🎯 Attention Center + Comfort Pack 1.8.8
 // ════════════════════════════════════════════════════════
-function _stripHtmlText(value) {
-    return String(value || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-}
-
-function buildAttentionCenter(data) {
-    const tasks = [];
-    const favList = Array.isArray(data?.favorites?.list) ? data.favorites.list : [];
-    const qmsList = Array.isArray(data?.qms?.list) ? data.qms.list : [];
-    const mentionsList = Array.isArray(data?.mentions?.list) ? data.mentions.list : [];
-    // Тикеты не подмешиваем в Центр внимания: для модераторов уже есть отдельная, полноценная вкладка тикетов.
-    // Для обычных пользователей этот блок вообще не должен всплывать.
-
-    qmsList.filter(d => (d.unread || d.count || d.new_count) && !d.viewed).slice(0, 4).forEach(d => {
-        tasks.push({
-            type: 'qms', priority: 80, id: d.id, dialog_id: d.id, opponent_id: d.opponent_id || d.mid,
-            title: _stripHtmlText(d.title || d.name || d.username || 'Новое QMS'),
-            meta: _stripHtmlText(d.last_message || d.text || 'Личное сообщение'),
-            actions: ['open_qms']
-        });
-    });
-
-    mentionsList.filter(m => (m.unread || !m.viewed)).slice(0, 4).forEach(m => {
-        tasks.push({
-            type: 'mention', priority: 70, id: m.id, topic_id: m.topic_id, post_id: m.post_id,
-            title: _stripHtmlText(m.title || m.topic_title || 'Упоминание'),
-            meta: _stripHtmlText(m.author || m.section || 'Ответ/упоминание'),
-            actions: ['open_mention']
-        });
-    });
-
-    favList.filter(t => !t.viewed).slice(0, 8).forEach(t => {
-        const unread = Number(t.unread_count || t.count || 1);
-        const focused = !!t.focused;
-        const pinned = !!t.pin;
-        tasks.push({
-            type: 'favorite', priority: (focused ? 68 : 45) + Math.min(20, unread) + (pinned ? 6 : 0),
-            id: t.id, title: _stripHtmlText(t.title || 'Избранная тема'),
-            meta: unread > 1 ? ('Новых сообщений: ' + unread) : 'Есть новое сообщение',
-            unread, actions: ['open_favorite', 'mute_topic']
-        });
-    });
-
-    tasks.sort((a, b) => b.priority - a.priority);
-    return {
-        ts: Date.now(), total: tasks.length, critical: 0,
-        headline: tasks.length ? 'Есть события для реакции' : 'Сейчас всё спокойно',
-        tasks: tasks.slice(0, 12)
-    };
-}
-
-function buildMorningDigest(data) {
-    const counts = {
-        tickets: data?.tickets?.enabled ? (data.tickets.count || 0) : 0,
-        qms: data?.qms?.count || 0,
-        mentions: data?.mentions?.count || 0,
-        favorites: data?.favorites?.count || 0,
-        bookmarks: Array.isArray(data?.bookmarks?.list) ? data.bookmarks.list.filter(b => !b.deleted).length : 0
-    };
-    const total = counts.tickets + counts.qms + counts.mentions + counts.favorites;
-    return {
-        ts: Date.now(), counts, total,
-        title: total ? 'Утренний дайджест готов' : 'Дайджест: новых событий нет',
-        text: total
-            ? ((counts.tickets ? 'Тикеты: ' + counts.tickets + ', ' : '') + 'QMS: ' + counts.qms + ', ответы: ' + counts.mentions + ', темы: ' + counts.favorites + '.')
-            : 'Новых QMS, ответов и тем сейчас нет. Закладок в памяти: ' + counts.bookmarks + '.'
-    };
-}
-
-function buildFavoritesCleanup(data) {
-    const favList = Array.isArray(data?.favorites?.list) ? data.favorites.list : [];
-    const nowSec = Math.floor(Date.now() / 1000);
-    const suggestions = [];
-    favList.forEach(t => {
-        const ageDays = t.last_post_ts ? Math.round((nowSec - Number(t.last_post_ts)) / 86400) : null;
-        const unread = Number(t.unread_count || t.count || 0);
-        if (unread >= 15) suggestions.push({ type: 'noisy', id: t.id, title: _stripHtmlText(t.title), reason: 'Много новых сообщений: ' + unread, action: 'mute_week' });
-        else if (ageDays !== null && ageDays >= 45 && t.viewed) suggestions.push({ type: 'stale', id: t.id, title: _stripHtmlText(t.title), reason: 'Нет активности примерно ' + ageDays + ' дн.', action: 'review' });
-    });
-    return { total: suggestions.length, suggestions: suggestions.slice(0, 8) };
-}
-
 function buildPopupEnvelope() {
     const data = bg.popup_data;
     data.attention = buildAttentionCenter(data);
@@ -1721,8 +1496,8 @@ async function clearSmartSilence() {
 
 async function ensureSilentDoctorAlarm() {
     try {
-        const current = await chrome.alarms.get('4pulse_silent_doctor').catch(() => null);
-        if (!current) chrome.alarms.create('4pulse_silent_doctor', { periodInMinutes: 5 });
+        const current = await chrome.alarms.get(ALARM_NAMES.silentDoctor).catch(() => null);
+        if (!current) chrome.alarms.create(ALARM_NAMES.silentDoctor, { periodInMinutes: 5 });
     } catch (_) {}
 }
 
@@ -1791,29 +1566,16 @@ async function initializeAlarm() {
         'last_429_time'
     ]);
 
-    const now = Date.now();
-    let multiplier = stored.backoff_multiplier || 1.0;
-
-    if (stored.is_429_active || (stored.last_429_time && (now - stored.last_429_time < 900000))) {
-        multiplier = Math.max(multiplier, 5.0);
-        debugWarn(`🛡️ Защитный режим: множитель увеличен до ${multiplier}x из-за недавних лимитов`);
-    }
-
-    let finalInterval;
-    if (bg.wsConnected) {
-        finalInterval = WS_FALLBACK_INTERVAL_MIN;
-        debugLog(`[Alarm] WS активен — polling каждые ${finalInterval} мин (fallback)`);
-    } else {
-        const baseInterval = Math.max(SETTINGS.interval / 60, 1.0);
-        const backoffInterval = baseInterval * multiplier;
-        const jitter = backoffInterval * 0.2 * (Math.random() * 2 - 1);
-        finalInterval = Math.max(backoffInterval + jitter, 1.0);
-        debugLog(`[Alarm] WS недоступен — polling каждые ${finalInterval.toFixed(1)} мин (normal)`);
-    }
-
-    const delayMinutes = stored.backoff_until > now
-        ? Math.max((stored.backoff_until - now) / 60000, 1.0)
-        : 0.17;
+    const schedule = calculatePollingSchedule({
+        state: stored,
+        wsConnected: bg.wsConnected,
+        intervalSeconds: SETTINGS.interval,
+        wsFallbackMinutes: WS_FALLBACK_INTERVAL_MIN,
+    });
+    const delayMinutes = schedule.delayInMinutes;
+    const finalInterval = schedule.periodInMinutes;
+    if (schedule.recentlyLimited) debugWarn(`🛡️ Защитный режим: множитель увеличен до ${schedule.multiplier}x из-за недавних лимитов`);
+    debugLog(`[Alarm] polling каждые ${finalInterval.toFixed(1)} мин (${bg.wsConnected ? 'WS fallback' : 'normal'})`);
 
     chrome.alarms.create(ALARM_NAME, {
         delayInMinutes: delayMinutes,
@@ -1833,7 +1595,7 @@ globalThis.reinitializeAlarm = initializeAlarm;
 async function syncTicketQuickPollAlarm() {
     try {
         const st = await chrome.storage.local.get(['tickets_enabled', 'tickets_unlocked']);
-        if (st.tickets_enabled && st.tickets_unlocked) {
+        if (shouldEnableTicketQuickPoll(st)) {
             chrome.alarms.create(TICKET_QUICK_POLL_ALARM, { periodInMinutes: 3 });
         } else {
             chrome.alarms.clear(TICKET_QUICK_POLL_ALARM).catch(() => {});
@@ -1841,124 +1603,162 @@ async function syncTicketQuickPollAlarm() {
     } catch (_) {}
 }
 
-// Listen to alarm events
-chrome.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name === ALARM_NAME) {
-        chrome.idle.queryState(300, (state) => {
-            if (state === 'locked') return;
-            if (state === 'idle' && Math.random() > 0.33) return;
-            bg.update();
-        });
+async function pollRadioMetadataAlarm() {
+    if (!radioState.isPlaying || !radioState.station || !canFetchRadioMetadata(radioState.station)) {
+        await chrome.alarms.clear(ICY_POLL_ALARM).catch(() => {});
+        return;
     }
-    if (alarm.name === BLINK_ALARM) {
-        _applyBlinkPhase();
+    const seq = _radioMetaSeq;
+    const stationAtStart = radioState.station;
+    const stationNameAtStart = radioState.stationName;
+    const meta = await fetchRadioMetadata(stationAtStart, stationNameAtStart).catch(() => null);
+    if (seq !== _radioMetaSeq || stationAtStart !== radioState.station) return;
+    if (meta?.title) {
+        const art = meta.art || await fetchTrackArt(meta.title);
+        if (seq !== _radioMetaSeq || stationAtStart !== radioState.station) return;
+        const before = radioState.currentTrack;
+        setRadioMetadataForCurrentStation(meta.title, art);
+        if (meta.title !== before) addToRadioHistory(meta.title, stationNameAtStart);
+        broadcastRadioState();
+    } else if (radioState.currentTrack) {
+        clearRadioMetadata('no metadata alarm');
+        broadcastRadioState();
     }
-    if (alarm.name === TICKET_QUICK_POLL_ALARM) {
-        chrome.idle.queryState(120, async (state) => {
-            if (state === 'locked') return;
-            try {
-                const st = await chrome.storage.local.get(['tickets_enabled', 'tickets_unlocked']);
-                if (!st.tickets_enabled || !st.tickets_unlocked) {
-                    syncTicketQuickPollAlarm();
-                    return;
-                }
-                await bg.tickets.update(false);
-                bg.update_action();
-            } catch (e) {
-                debugWarn('[BG] ticketQuickPoll failed:', e?.message || e);
-            }
-        });
+}
+
+async function keepRadioAliveAlarm() {
+    if (!radioState.isPlaying || !radioState.station) return;
+    const audio = radioAudio;
+    if (!audio || audio.paused || audio.ended || audio.readyState === 0) {
+        debugLog('[Radio] Keepalive: аудио остановилось — перезапускаем');
+        await radioPlay().catch(() => {});
     }
-    if (alarm.name === '4pulse_silent_doctor') {
-        foundationRunDoctor(true).catch(()=>{});
-    }
-    // 🔌 WS keep-alive: при каждом alarm проверяем состояние WS.
-    // Если WS отвалился (SW перезапустился, сеть мигнула) — bg.update()
-    // обнаружит что WS не подключён и запустит переподключение.
-    // Это решает проблему "уведомления только при ручном обновлении".
-    if (alarm.name === '4pulse_ws_keepalive') {
-        if (bg && !bg.wsConnected) {
-            debugLog('[BG] Keep-alive: WS не подключён — запускаем update()');
-            bg.update();
-        }
-    }
-    // ★ FIX: ICY metadata polling через alarm (вместо setInterval)
-    if (alarm.name === ICY_POLL_ALARM) {
-        if (!radioState.isPlaying || !radioState.station || !canFetchRadioMetadata(radioState.station)) {
-            chrome.alarms.clear(ICY_POLL_ALARM).catch(() => {});
-            return;
-        }
-        const seq = _radioMetaSeq;
-        const stationAtStart = radioState.station;
-        const stationNameAtStart = radioState.stationName;
-        fetchRadioMetadata(stationAtStart, stationNameAtStart).then(async meta => {
-            if (seq !== _radioMetaSeq || stationAtStart !== radioState.station) return;
-            if (meta?.title) {
-                const art = meta.art || await fetchTrackArt(meta.title);
-                if (seq !== _radioMetaSeq || stationAtStart !== radioState.station) return;
-                const before = radioState.currentTrack;
-                setRadioMetadataForCurrentStation(meta.title, art);
-                if (meta.title !== before) addToRadioHistory(meta.title, stationNameAtStart);
-                broadcastRadioState();
-            } else if (radioState.currentTrack) {
-                clearRadioMetadata('no metadata alarm');
-                broadcastRadioState();
-            }
-        }).catch(() => {});
-    }
-    // ★ FIX: Radio keepalive — проверяем и восстанавливаем воспроизведение
-    if (alarm.name === RADIO_KEEPALIVE_ALARM) {
-        if (radioState.isPlaying && radioState.station) {
-            const audio = radioAudio;
-            if (!audio || audio.paused || audio.ended || audio.readyState === 0) {
-                debugLog('[Radio] Keepalive: аудио остановилось — перезапускаем');
-                radioPlay().catch(() => {});
-            }
-        }
-    }
+}
+
+const handleBackgroundAlarm = createBackgroundAlarmHandler({
+    queryIdle: seconds => new Promise(resolve => chrome.idle.queryState(seconds, resolve)),
+    update: force => bg.update(force),
+    applyBlinkPhase: _applyBlinkPhase,
+    loadTicketState: () => chrome.storage.local.get(['tickets_enabled', 'tickets_unlocked']),
+    syncTicketQuickPoll: syncTicketQuickPollAlarm,
+    updateTickets: force => bg.tickets.update(force),
+    updateAction: () => bg.update_action(),
+    runDoctor: foundationRunDoctor,
+    isWsConnected: () => bg.wsConnected,
+    pollRadioMetadata: pollRadioMetadataAlarm,
+    keepRadioAlive: keepRadioAliveAlarm,
+    onError: (error, alarm) => debugWarn(`[BG] alarm ${alarm?.name} failed:`, error),
 });
+chrome.alarms.onAlarm.addListener(handleBackgroundAlarm);
 
 // Listen for backoff state changes - merged below with main storage listener
 
 
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-    switch (info.menuItemId) {
-        case 'update.all':
-            addEventLog('action', 'Контекстное меню: обновить всё', 'info');
-            bg.update(true);
-            break;
-        case 'open.qms':
-            open_url('https://4pda.to/forum/index.php?act=qms', true, false);
-            break;
-        case 'open.favorites':
-            open_url('https://4pda.to/forum/index.php?act=fav', true, false);
-            break;
-        case 'open.mentions':
-            open_url('https://4pda.to/forum/index.php?act=mentions', true, false);
-            break;
-        case 'open.tickets':
-            open_url('https://4pda.to/forum/index.php?act=ticket', true, false);
-            break;
-        case 'open.site':
-            open_url('https://4pda.to/forum/', true, false);
-            break;
-        case 'open.auth':
-            open_url('https://4pda.to/forum/index.php?act=auth', true, false);
-            break;
-        case 'open.profile':
-            if (bg.user_id) {
-                open_url('https://4pda.to/forum/index.php?showuser=' + bg.user_id, true, false);
-            } else {
-                open_url('https://4pda.to/forum/index.php?act=auth', true, false);
-            }
-            break;
-        case 'open.options':
-            open_url(chrome.runtime.getURL('/html/options.html?section=fourpulse'), true, true);
-            break;
-        case 'open.diagnostics':
-            open_url(chrome.runtime.getURL('/html/options.html?section=diagnostics#diagnostics'), true, true);
-            break;
-    }
+chrome.contextMenus.onClicked.addListener(info => { contextMenuService.handleClick(info.menuItemId); });
+
+const routeRadioMessage = createRadioMessageRouter({
+    getState: getRadioPublicState,
+    play: radioPlay,
+    pause: radioPause,
+    setVolume: radioSetVolume,
+    setEnabled: async enabled => {
+        radioState.enabled = enabled;
+        if (enabled) await saveRadioState();
+        else await radioPause();
+    },
+    setSleepTimer: radioSetSleepTimer,
+    getHistory: async () => (await chrome.storage.local.get('radio_history')).radio_history || [],
+    clearHistory: () => chrome.storage.local.set({ radio_history: [] }),
+});
+
+const routeFoundationMessage = createFoundationMessageRouter({
+    applyProfile: foundationApplyProfile,
+    createBackup: foundationCreateBackup,
+    restoreLatestBackup: foundationRestoreLatestBackup,
+    runDoctor: foundationRunDoctor,
+    clearEventLog,
+    runSelfHeal,
+    getDiagnosticsSnapshot,
+    setSmartSilence,
+    clearSmartSilence,
+    getAttentionSnapshot: () => {
+        const envelope = buildPopupEnvelope();
+        return {
+            attention: envelope.attention,
+            digest: envelope.morning_digest,
+            cleanup: envelope.favorites_cleanup,
+        };
+    },
+});
+
+const routeBookmarkMessage = createBookmarkMessageRouter({
+    deleteBookmark: id => bg.deleteBookmark(id),
+    renameBookmark: (id, title) => bg.renameBookmark(id, title),
+    addBookmark: (title, url, parentId) => bg.addBookmark(title, url, parentId),
+    addFolder: (title, parentId) => bg.addFolder(title, parentId),
+});
+
+const routeTicketMessage = createTicketMessageRouter({
+    tickets: bg.tickets,
+    updateAction: () => bg.update_action(),
+    fetchWithRetry,
+    fetchText,
+});
+
+const routeSmileyMessage = createSmileyMessageRouter({
+    saveCatalog: catalog => chrome.storage.local.set({ pda_smileys_catalog_v1: catalog }),
+});
+
+const routeAvatarMessage = createAvatarMessageRouter({
+    lookupAuthorAvatar,
+    refreshUserAvatar: force => bg.refreshUserAvatar(force),
+    getCurrentAvatar: () => bg.user_avatar,
+    getAvatarFromPage: getAvatarFromOpen4pdaTabs,
+    cacheAvatarAsDataUrl: cacheAvatarUrlAsDataUrl,
+    saveUserAvatar: (avatar, source) => chrome.storage.local.set({
+        cached_user_avatar: avatar,
+        cached_user_avatar_source: source,
+    }).catch(() => {}),
+});
+
+const routeNavigationMessage = createNavigationMessageRouter({
+    getUserId: () => bg.user_id,
+    getDefaultActive: () => SETTINGS.toolbar_open_theme_hide,
+    getOptionsUrl: () => chrome.runtime.getURL('/html/options.html?section=fourpulse'),
+    openUrl: open_url,
+    qms: bg.qms,
+    favorites: bg.favorites,
+    mentions: bg.mentions,
+    updateAction: () => bg.update_action(),
+});
+
+const routePopupMessage = createPopupMessageRouter({
+    settings: SETTINGS,
+    loadSettings: keys => chrome.storage.local.get(keys),
+    getUserId: () => bg.user_id,
+    buildEnvelope: buildPopupEnvelope,
+    openAuth: () => open_url('https://4pda.to/forum/index.php?act=auth'),
+    forceUpdate: () => bg.update(true),
+    startBlink: startPriorityBlink,
+    stopBlink: stopPriorityBlink,
+    markFavoriteAsRead: id => bg.favorites.do_read(id),
+    getFocusedTopics: async () => (await chrome.storage.local.get(['focused_topics'])).focused_topics || [],
+    getFavorites: () => bg.favorites.list,
+    getFavoriteById: id => bg.favorites._list[id],
+    getCounts: () => ({
+        favorites: bg.favorites.count,
+        qms: bg.qms.count,
+        mentions: bg.mentions.count,
+    }),
+    updateAction: () => bg.update_action(),
+    requestHistory: () => bg.requestHistoryFromWs(),
+});
+
+const routeContentMessage = createContentMessageRouter({
+    fetchQmsSubject: opponentId => bg.qms.fetchDialogSubject(opponentId),
+    fetchPage: (url, options) => fetch4(url, options),
+    getForumTabs: () => chrome.tabs.query({ url: 'https://4pda.to/forum/*' }),
+    sendTabMessage: (tabId, message) => chrome.tabs.sendMessage(tabId, message),
 });
 
 // Listen for messages from popup or other extension parts
@@ -1967,692 +1767,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Enable manually only while debugging, otherwise frequent UI polling
     // (for example radio_get_state) floods the extension console.
 
-    // Bookmark operations — handled before switch to avoid any JS lexical issues
-    if (message.action === 'bookmark_delete') {
-        if (globalThis.__FOURPULSE_DEBUG__) debugLog('[BG] bookmark_delete id=', message.id, 'typeof bg.deleteBookmark=', typeof bg.deleteBookmark);
-        bg.deleteBookmark(message.id)
-            .then(ok => { if (globalThis.__FOURPULSE_DEBUG__) debugLog('[BG] delete ok=', ok); sendResponse({ ok }); })
-            .catch(e => { console.error('[BG] delete error:', e); sendResponse({ ok: false }); });
-        return true;
-    }
-    if (message.action === 'bookmark_rename') {
-        if (globalThis.__FOURPULSE_DEBUG__) debugLog('[BG] bookmark_rename id=', message.id, 'title=', message.title, 'typeof bg.renameBookmark=', typeof bg.renameBookmark);
-        bg.renameBookmark(message.id, message.title)
-            .then(ok => { if (globalThis.__FOURPULSE_DEBUG__) debugLog('[BG] rename ok=', ok); sendResponse({ ok }); })
-            .catch(e => { console.error('[BG] rename error:', e); sendResponse({ ok: false }); });
-        return true;
-    }
-    if (message.action === 'bookmark_add') {
-        if (globalThis.__FOURPULSE_DEBUG__) debugLog('[BG] bookmark_add title=', message.title, 'url=', message.url, 'parentId=', message.parentId);
-        bg.addBookmark(message.title, message.url, message.parentId ?? 0)
-            .then(ok => { if (globalThis.__FOURPULSE_DEBUG__) debugLog('[BG] bookmark_add ok=', ok); sendResponse({ ok }); })
-            .catch(e => { console.error('[BG] bookmark_add error:', e); sendResponse({ ok: false }); });
-        return true;
-    }
-    if (message.action === 'folder_add') {
-        if (globalThis.__FOURPULSE_DEBUG__) debugLog('[BG] folder_add title=', message.title, 'parentId=', message.parentId);
-        bg.addFolder(message.title, message.parentId ?? 0)
-            .then(ok => { if (globalThis.__FOURPULSE_DEBUG__) debugLog('[BG] folder_add ok=', ok); sendResponse({ ok }); })
-            .catch(e => { console.error('[BG] folder_add error:', e); sendResponse({ ok: false }); });
-        return true;
-    }
-
-    if (message.action === 'pda_smileys_capture') {
-        (async () => {
-            try {
-                const incoming = Array.isArray(message.items) ? message.items : [];
-                const seen = new Set();
-                const items = incoming.filter(item => {
-                    const code = String(item?.code || '').trim();
-                    const src = String(item?.src || '').trim();
-                    if (!code || !src || seen.has(code)) return false;
-                    if (!(/^:[^\s]{1,80}:$/.test(code) || code === ':)' || code === ';)' || code === ':P' || code === ':-D')) return false;
-                    if (!/^https?:\/\//i.test(src)) return false;
-                    seen.add(code);
-                    return true;
-                }).map(item => ({
-                    code: String(item.code).trim(),
-                    src: String(item.src).trim(),
-                    title: String(item.title || item.code || '').trim(),
-                    alt: String(item.alt || item.code || '').trim()
-                }));
-                if (items.length < 20) {
-                    sendResponse({ ok: false, captured: items.length });
-                    return;
-                }
-                await chrome.storage.local.set({
-                    pda_smileys_catalog_v1: {
-                        ts: Date.now(),
-                        items,
-                        source_url: String(message.source_url || ''),
-                        captured_count: items.length
-                    }
-                });
-                sendResponse({ ok: true, captured: items.length });
-            } catch (error) {
-                sendResponse({ ok: false, error: String(error?.message || error) });
-            }
-        })();
-        return true;
-    }
-
-    switch (message.action) {
-        case 'radio_get_state':
-            sendResponse(getRadioPublicState());
-            break;
-
-        case 'radio_play':
-            radioPlay(message.station, message.stationName).then(() => sendResponse(getRadioPublicState()));
-            return true;
-
-        case 'radio_pause':
-            radioPause().then(() => sendResponse(getRadioPublicState()));
-            return true;
-
-        case 'radio_set_volume':
-            radioSetVolume(message.volume).then(() => sendResponse({ ok: true }));
-            return true;
-
-        case 'radio_set_enabled':
-            radioState.enabled = !!message.enabled;
-            if (!radioState.enabled) radioPause();
-            else saveRadioState();
-            sendResponse({ ok: true });
-            break;
-
-        case 'radio_set_sleep_timer':
-            radioSetSleepTimer(message.minutes);
-            sendResponse(getRadioPublicState());
-            break;
-
-        case 'radio_get_history':
-            chrome.storage.local.get('radio_history').then(s =>
-                sendResponse(s.radio_history || [])
-            );
-            return true;
-
-        case 'radio_clear_history':
-            chrome.storage.local.set({ radio_history: [] }).then(() => sendResponse({ ok: true }));
-            return true;
-
-
-        case 'foundation_apply_profile':
-            foundationApplyProfile(message.profile)
-                .then(result => sendResponse(result))
-                .catch(error => sendResponse({ ok:false, error:String(error?.message || error) }));
-            return true;
-
-        case 'foundation_create_backup':
-            foundationCreateBackup(!!message.manual)
-                .then(result => sendResponse(result))
-                .catch(error => sendResponse({ ok:false, error:String(error?.message || error) }));
-            return true;
-
-        case 'foundation_restore_latest_backup':
-            foundationRestoreLatestBackup()
-                .then(result => sendResponse(result))
-                .catch(error => sendResponse({ ok:false, error:String(error?.message || error) }));
-            return true;
-
-        case 'foundation_run_doctor':
-            foundationRunDoctor(false)
-                .then(result => sendResponse(result))
-                .catch(error => sendResponse({ ok:false, error:String(error?.message || error) }));
-            return true;
-
-        case 'diagnostics_clear_log':
-            clearEventLog().then(result => sendResponse(result || { ok: true })).catch(error => sendResponse({ ok: false, error: String(error?.message || error) }));
-            return true;
-
-        case 'diagnostics_self_heal':
-            runSelfHeal()
-                .then(snapshot => sendResponse(snapshot))
-                .catch(error => sendResponse({ ok: false, error: String(error?.message || error) }));
-            return true;
-
-        case 'diagnostics_snapshot':
-            getDiagnosticsSnapshot()
-                .then(snapshot => sendResponse(snapshot))
-                .catch(error => sendResponse({ ok: false, error: String(error?.message || error) }));
-            return true;
-
-        case 'smart_silence_set':
-            setSmartSilence(message.minutes || 30, message.mode || 'focus')
-                .then(result => sendResponse(result))
-                .catch(error => sendResponse({ ok: false, error: String(error?.message || error) }));
-            return true;
-
-        case 'smart_silence_clear':
-            clearSmartSilence()
-                .then(result => sendResponse(result))
-                .catch(error => sendResponse({ ok: false, error: String(error?.message || error) }));
-            return true;
-
-        case 'attention_snapshot':
-            try {
-                const env = buildPopupEnvelope();
-                sendResponse({ ok: true, attention: env.attention, digest: env.morning_digest, cleanup: env.favorites_cleanup });
-            } catch (error) { sendResponse({ ok: false, error: String(error?.message || error) }); }
-            return true;
-
-
-        case 'author_avatar_lookup':
-            lookupAuthorAvatar(message.user_id, message.user_name, message.profile_url)
-                .then(result => sendResponse(result))
-                .catch(error => sendResponse({ ok: false, error: String(error?.message || error) }));
-            return true;
-
-        case 'user_avatar_refresh':
-            (async () => {
-                let result = await bg.refreshUserAvatar(!!message.force).catch(error => ({ ok: false, error: String(error?.message || error), user_avatar_url: bg.user_avatar || '' }));
-                if (!result?.user_avatar_url) {
-                    const fromPage = await getAvatarFromOpen4pdaTabs();
-                    if (fromPage) {
-                        const dataAvatar = await cacheAvatarUrlAsDataUrl(fromPage);
-                        const finalAvatar = dataAvatar || fromPage;
-                        await chrome.storage.local.set({ cached_user_avatar: finalAvatar, cached_user_avatar_source: fromPage }).catch(() => {});
-                        // Обновляем внутренний кэш через force-запрос уже не нужен — popup получит URL сразу.
-                        result = { ok: true, user_avatar_url: finalAvatar, source: fromPage };
-                    }
-                }
-                sendResponse(result || { ok: false, user_avatar_url: bg.user_avatar || '' });
-            })().catch(error => sendResponse({ ok: false, error: String(error?.message || error), user_avatar_url: bg.user_avatar || '' }));
-            return true;
-
-        case 'popup_loaded':
-            // Stop blink when user opens popup
-            stopPriorityBlink();
-            if (bg.user_id) {
-                sendResponse(buildPopupEnvelope());
-            } else {
-                // 🔧 FIX: Service worker may still be initializing (MV3 restarts).
-                // Wait up to 4s for user_id to appear before giving up and redirecting to auth.
-                (async () => {
-                    let waited = 0;
-                    while (!bg.user_id && waited < 4000) {
-                        await new Promise(r => setTimeout(r, 250));
-                        waited += 250;
-                    }
-                    if (bg.user_id) {
-                        sendResponse(buildPopupEnvelope());
-                    } else {
-                        open_url('https://4pda.to/forum/index.php?act=auth');
-                        sendResponse(null);
-                    }
-                })();
-            }
-            return true;
-            
-        case 'reload_settings':
-            // После импорта настроек — перезагружаем весь объект SETTINGS из storage
-            (async () => {
-                try {
-                    const stored = await chrome.storage.local.get(Object.keys(SETTINGS));
-                    for (const [key, val] of Object.entries(stored)) {
-                        if (key in SETTINGS) SETTINGS[key] = val;
-                    }
-                    sendResponse({ ok: true });
-                } catch(e) {
-                    sendResponse({ ok: false });
-                }
-            })();
-            return true;
-
-        case 'force_update':
-            // 🆕 NEW: Force immediate update with full HTML page fetch (forceRefresh = true)
-            bg.update(true).then(() => {
-                sendResponse({ success: true });
-            }).catch(error => {
-                console.error('❌ Force update failed:', error);
-                sendResponse({ success: false });
-            });
-            return true; // Keep channel open for async response
-
-        case 'start_priority_blink':
-            startPriorityBlink();
-            sendResponse({ ok: true });
-            break;
-
-        case 'stop_priority_blink':
-            stopPriorityBlink();
-            sendResponse({ ok: true });
-            break;
-        case 'mark_as_read':
-            bg.favorites.do_read(message.id)
-                .then(result => {
-                    // If there are no more unread focused topics, stop blinking
-                    chrome.storage.local.get(['focused_topics']).then(stored => {
-                        const ft = (stored.focused_topics || []).map(String);
-                        const anyFocusedUnread = bg.favorites.list.some(
-                            t => !t.viewed && ft.includes(String(t.id))
-                        );
-                        if (!anyFocusedUnread) stopPriorityBlink();
-                    });
-                    sendResponse(result);
-                })
-                .catch((error) => {
-                    console.error('Error marking theme as read:', error);
-                    sendResponse(false);
-                });
-            return true; // Keep channel open for async response
-        case 'open_url': {
-            // Из сайдбара (message.sidebar===true) всегда открываем вкладку активной,
-            // т.к. сайдбар не закрывается сам в отличие от попапа.
-            // message.background===true (Shift/Ctrl/Cmd/MiddleClick) — фоновая вкладка.
-            let setActive;
-            if (message.background === true) {
-                setActive = false;  // 🆕 Принудительно фоновая вкладка (модификатор клавиатуры/средняя кнопка)
-            } else if (message.sidebar === true) {
-                setActive = true;
-            } else {
-                setActive = SETTINGS.toolbar_open_theme_hide;
-            }
-
-            switch (message.what) {
-                case 'user':
-                    return open_url(`https://4pda.to/forum/index.php?showuser=${bg.user_id}`, true, true);
-                case 'options':
-                    return open_url(chrome.runtime.getURL('/html/options.html?section=fourpulse'), true, true);
-                case 'qms':
-                    if (message.dialog_id) {
-                        const dialogId = message.dialog_id;
-                        const marked = bg.qms.markAsViewed(dialogId);
-                        if (marked) bg.update_action();
-                    }
-                    if (message.opponent_id && message.dialog_id && message.dialog_id !== message.opponent_id) {
-                        return open_url(
-                            `https://4pda.to/forum/index.php?act=qms&mid=${message.opponent_id}&t=${message.dialog_id}`,
-                            setActive, false
-                        );
-                    }
-                    if (message.opponent_id) {
-                        return open_url(
-                            `https://4pda.to/forum/index.php?act=qms&mid=${message.opponent_id}`,
-                            setActive, false
-                        );
-                    }
-                    return bg.qms.open();
-
-                case 'favorites':
-                    bg.favorites.open(message.id, message['view'], setActive)
-                        .then(async (result) => {
-                            const [tab, theme] = Array.isArray(result) ? result : [result, null];
-                            if (theme && theme.viewed) {
-                                await bg.mentions.markTopicMentionsAsViewed(theme.id);
-                                bg.update_action();
-                            }
-                        }).catch(err => { debugWarn('Error opening favorite:', err); });
-                    break;
-
-                case 'bookmarks':
-                    return open_url('https://4pda.to/forum/index.php?act=fav', true, false);
-
-                case 'tickets':
-                    return open_url('https://4pda.to/forum/index.php?act=ticket', true, false);
-
-                case 'external':
-                    if (message.url) return open_url(message.url, true, false);
-                    break;
-
-                case 'mentions':
-                    if (message.topic_id && message.post_id) {
-                        const mentionId = `${message.topic_id}_${message.post_id}`;
-                        bg.mentions.markAsViewed(mentionId)
-                            .then(() => bg.update_action())
-                            .catch(err => { console.error('Failed to save mention viewed state:', err); });
-                        bg.update_action();
-                        return open_url(
-                            `https://4pda.to/forum/index.php?showtopic=${message.topic_id}&view=findpost&p=${message.post_id}`,
-                            setActive, false
-                        );
-                    }
-                    return bg.mentions.open();
-            }
-            break;
-        }
-        case 'get_counts':
-            // Return current counts for popup polling
-            sendResponse({
-                favorites: bg.favorites.count,
-                qms: bg.qms.count,
-                mentions: bg.mentions.count
-            });
-            break;
-        
-        case 'page_topic_opened':
-            // 🆕 NEW: Content script сообщает, что пользователь открыл тему напрямую в браузере
-            // Мгновенно помечаем тему как прочитанную и обновляем бейдж
-            if (message.topic_id && message.is_read) {
-                const topicId = String(message.topic_id);
-                const theme = bg.favorites._list[topicId];
-                if (theme && !theme.viewed) {
-                    theme.viewed = true;
-                    bg.update_action();
-                }
-            }
-            break;
-        case 'request':
-            switch (message.what) {
-                case 'favorites.count':
-                    sendResponse(bg.favorites.count);
-                    break;
-                case 'qms.count':
-                    sendResponse(bg.qms.count);
-                    break;
-                case 'mentions.count':
-                    sendResponse(bg.mentions.count);
-                    break;
-            }
-            break;
-        case 'fetch_qms_subject':
-            // 🆕 NEW: Fetch dialog subject for a specific QMS user
-            if (message.opponent_id) {
-                bg.qms.fetchDialogSubject(message.opponent_id)
-                    .then(result => {
-                        sendResponse(result);
-                    })
-                    .catch(error => {
-                        console.error('Error fetching QMS subject:', error);
-                        sendResponse(null);
-                    });
-                return true; // Keep channel open for async response
-            }
-            break;
-
-        case 'resolve_favorite_preview':
-            if (message.topic_id) {
-                fetch4('https://4pda.to/forum/index.php?act=fav')
-                    .then(html => {
-                        const found = resolveFavoritePreviewFromFavHtml(html, message.topic_id);
-                        sendResponse(found ? { ok: true, ...found } : { ok: false, error: 'no direct post link' });
-                    })
-                    .catch(err => sendResponse({ ok: false, error: String(err) }));
-                return true;
-            }
-            sendResponse({ ok: false, error: 'no topic_id' });
-            break;
-
-        case 'fetch_page':
-            // Generic page fetch via background (has credentials/cookies, bypasses CORS)
-            if (message.url) {
-                fetch4(message.url)
-                    .then(html => sendResponse({ ok: true, html }))
-                    .catch(err => sendResponse({ ok: false, error: String(err) }));
-                return true;
-            }
-            break;
-
-        // 🎫 TICKETS — handled via sendMessage (not port) so popup gets response
-        case 'open_ticket':
-            bg.tickets.open(message['id'], !!message['sidebar'])
-                .then(result => {
-                    sendResponse({ ok: true, count: bg.tickets.count });
-                })
-                .catch(err => {
-                    debugWarn('Error opening ticket:', err);
-                    sendResponse({ ok: false });
-                });
-            return true;
-
-        case 'open_ticket_source':
-            bg.tickets.openSource(message['id'], !!message['sidebar'])
-                .then(result => {
-                    sendResponse({ ok: true, count: bg.tickets.count });
-                })
-                .catch(err => {
-                    debugWarn('Error opening ticket source:', err);
-                    sendResponse({ ok: false });
-                });
-            return true;
-
-        case 'ticket_change_status':
-            bg.tickets.changeStatus(message['id'], message['status'])
-                .then(ok => {
-                    if (ok) bg.update_action();
-                    sendResponse({ ok, count: bg.tickets.count });
-                })
-                .catch(err => {
-                    debugWarn('Error changing ticket status:', err);
-                    sendResponse({ ok: false });
-                });
-            return true;
-
-        case 'ticket_mark_viewed':
-            bg.tickets.markAsViewed(message['id'])
-                .then(() => { bg.update_action(); sendResponse({ ok: true }); })
-                .catch(err => { debugWarn('Error marking ticket viewed:', err); sendResponse({ ok: false }); });
-            return true;
-
-        // 💬 Quick comment on ticket
-        case 'ticket_add_comment': {
-            const { id: tcid, comment } = message;
-            if (!tcid || !comment) { sendResponse({ ok: false }); break; }
-
-            // 4PDA форум работает в Windows-1251. FormData отправляет UTF-8 → кракозябры.
-            // Перекодируем строки в Win1251 вручную и шлём как application/x-www-form-urlencoded
-            // с явным указанием charset в Content-Type.
-            function toWin1251Bytes(str) {
-                const map = new Map();
-                for (let i = 0; i < 128; i++) map.set(i, i);
-                // Кириллица A-я: U+0410–U+044F → 0xC0–0xEF
-                for (let i = 0; i < 64; i++) map.set(0x0410 + i, 0xC0 + i);
-                map.set(0x0401, 0xA8); // Ё
-                map.set(0x0451, 0xB8); // ё
-                // Прочие win1251 символы (0x80–0xBF)
-                const extra = [0x20AC,0,0x201A,0x192,0x201E,0x2026,0x2020,0x2021,
-                               0x2C6,0x2030,0x160,0x2039,0x152,0,0x17D,0,
-                               0,0x2018,0x2019,0x201C,0x201D,0x2022,0x2013,0x2014,
-                               0x2DC,0x2122,0x161,0x203A,0x153,0,0x17E,0x178,
-                               0xA0,0xA1,0xA2,0xA3,0xA4,0xA5,0xA6,0xA7,
-                               0xA8,0xA9,0xAA,0xAB,0xAC,0xAD,0xAE,0xAF,
-                               0xB0,0xB1,0xB2,0xB3,0xB4,0xB5,0xB6,0xB7,
-                               0xB8,0xB9,0xBA,0xBB,0xBC,0xBD,0xBE,0xBF];
-                extra.forEach((cp, i) => { if (cp) map.set(cp, 0x80 + i); });
-                const buf = new Uint8Array(str.length * 2);
-                let len = 0;
-                for (const ch of str) {
-                    const cp = ch.codePointAt(0);
-                    buf[len++] = map.has(cp) ? map.get(cp) : 0x3F; // '?' для неизвестных
-                }
-                return buf.slice(0, len);
-            }
-            function win1251EncodeField(str) {
-                // percent-encode каждого байта win1251
-                return Array.from(toWin1251Bytes(str))
-                    .map(b => '%' + b.toString(16).toUpperCase().padStart(2, '0'))
-                    .join('');
-            }
-
-            const body = [
-                'tact=add',
-                't_id=' + encodeURIComponent(String(tcid)),
-                'm_comment=' + win1251EncodeField(comment),
-                'confirm=' + win1251EncodeField('Написал хорошо, можно публиковать'),
-            ].join('&');
-
-            fetchWithRetry(`https://4pda.to/forum/index.php?act=ticket&s=thread&`, {
-                method: 'POST',
-                credentials: 'include',
-                referrerPolicy: 'no-referrer-when-downgrade',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=windows-1251' },
-                body,
-            })
-            .then(r => sendResponse({ ok: r.ok }))
-            .catch(() => sendResponse({ ok: false }));
-            return true;
-        }
-
-        // 🎯 Fetch curator from ticket thread page
-        case 'ticket_fetch_curator': {
-            const tid = message['id'];
-            if (!tid) { sendResponse({ ok: false }); break; }
-            const threadUrl = `https://4pda.to/forum/index.php?act=ticket&s=thread&t_id=${tid}`;
-            fetchText(threadUrl, {
-                credentials: 'include',
-                referrerPolicy: 'no-referrer-when-downgrade',
-            }, 'windows-1251')
-            .then(async html => {
-
-                const clean = (s) => s.replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&quot;/g,'"').trim();
-
-                // Куратор темы: <strong>Куратор:</strong> <a ...>Name</a>
-                const curatorRe = /<strong>[^<]*\u041a\u0443\u0440\u0430\u0442\u043e\u0440[^<]*<\/strong>\s*<a[^>]*>([^<]+)<\/a>/i;
-                const curatorM  = html.match(curatorRe);
-                const curator   = curatorM ? clean(curatorM[1]) : '';
-
-                // Тема форума: <strong>Тема:</strong> <a href="URL">Title</a>
-                const topicRe = /<strong>[^<]*\u0422\u0435\u043c\u0430[^<]*<\/strong>\s*<a[^>]*href="([^"]+)"[^>]*>([^<]+)<\/a>/i;
-                const topicM  = html.match(topicRe);
-                const topicTitle = topicM ? clean(topicM[2]) : '';
-                const topicUrl   = topicM ? topicM[1].replace(/&amp;/g,'&') : '';
-
-                // Ответственный (t-mod): кто взял тикет в работу
-                const modRe = new RegExp(`id="t-mod-${tid}"[^>]*>([\\s\\S]*?)<\\/div>`, 'i');
-                const modM  = html.match(modRe);
-                let responsible = '';
-                if (modM) {
-                    responsible = modM[1].replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').replace(/[–\-]/g,'').trim();
-                }
-
-                sendResponse({ ok: true, curator, responsible, topicTitle, topicUrl });
-            })
-            .catch(() => sendResponse({ ok: false }));
-            return true;
-        }
-
-        // 🔬 Диагностика: получить HTML страницы закладок через content script
-        case 'fav_debug_page':
-            chrome.tabs.query({ url: 'https://4pda.to/forum/*' }).then(tabs => {
-                if (!tabs.length) { sendResponse({ ok: false, error: 'no 4pda tab' }); return; }
-                chrome.tabs.sendMessage(tabs[0].id, { action: 'fav_fetch_page' }, resp => {
-                    sendResponse(resp);
-                });
-            });
-            return true;
-
-
-        case 'ticket_nav_count': {
-            const count = Number(message.count);
-            if (!Number.isFinite(count) || count < 0) {
-                sendResponse({ ok: false });
-                return false;
-            }
-            bg.tickets.applyPageSnapshot({ totalUnprocessed: count, tickets: [] })
-                .then(ok => {
-                    if (ok) bg.update_action();
-                    sendResponse({ ok, count: bg.tickets.count });
-                })
-                .catch(err => {
-                    debugWarn('Error applying ticket nav count:', err);
-                    sendResponse({ ok: false });
-                });
-            return true;
-        }
-
-        case 'ticket_page_snapshot':
-            bg.tickets.applyPageSnapshot(message.snapshot || {})
-                .then(ok => {
-                    if (ok) bg.update_action();
-                    sendResponse({ ok, count: bg.tickets.count, list: bg.tickets.list });
-                })
-                .catch(err => {
-                    console.error('Error applying ticket page snapshot:', err);
-                    sendResponse({ ok: false });
-                });
-            return true;
-
-        case 'tickets_refresh':
-            bg.tickets.update(true)
-                .then(() => {
-                    bg.update_action();
-                    sendResponse({ count: bg.tickets.count, list: bg.tickets.list });
-                })
-                .catch(err => {
-                    debugWarn('Error refreshing tickets:', err);
-                    sendResponse({ count: 0, list: [] });
-                });
-            return true;
-
-        case 'request_history':
-            bg.requestHistoryFromWs();
-            sendResponse({ ok: true });
-            return false;
-
-    }
-    // 🔧 FIX: Don't return true by default!
-    // Only cases that call sendResponse() asynchronously should return true.
-    // Returning true here would cause "message channel closed" errors for cases
-    // that handle responses synchronously or don't send responses at all.
+    if (routeRadioMessage(message, sendResponse)) return true;
+    if (routeFoundationMessage(message, sendResponse)) return true;
+    if (routeBookmarkMessage(message, sendResponse)) return true;
+    if (routeTicketMessage(message, sendResponse)) return true;
+    if (routeSmileyMessage(message, sendResponse)) return true;
+    if (routeAvatarMessage(message, sendResponse)) return true;
+    if (routeNavigationMessage(message, sendResponse)) return true;
+    if (routePopupMessage(message, sendResponse)) return true;
+    if (routeContentMessage(message, sendResponse)) return true;
 });
 
-chrome.runtime.onConnect.addListener(async (port) => {
-    
-    const isPortConnected = () => {
-        try {
-            return port.name !== undefined;
-        } catch (e) {
-            return false;
-        }
-    };
-
-    const safePostMessage = (msg) => {
-        try {
-            if (isPortConnected()) {
-                port.postMessage(msg);
-                return true;
-            }
-        } catch (e) {
-            debugWarn('Port disconnected, cannot send message:', e);
-        }
-        return false;
-    };
-
-    switch (port.name) {
-        case 'themes-read-all':
-            for (let theme of bg.favorites.list) {
-                if (await theme.read()) {
-                    safePostMessage({
-                        id: theme.id,
-                        count: bg.favorites.count,
-                    });
-                }
-            }
-            break;
-        case 'themes-open-all':
-            let count_TPA = 0;
-            for (let theme of bg.favorites.list) {
-                theme.open(false, false)
-                    .then(([tab, theme]) => {
-                        if (theme.viewed) {
-                            safePostMessage({
-                                id: theme.id,
-                                count: bg.favorites.count,
-                            });
-                        }
-                    })
-                    .catch(err => debugWarn('Error opening theme:', err));
-                if (++count_TPA >= SETTINGS.open_themes_limit) break;
-            }
-            break;
-        case 'themes-open-all-pin':
-            let count_TPAP = 0;
-            for (let theme of bg.favorites.list_pin) {
-                theme.open(false, false)
-                    .then(([tab, theme]) => {
-                        if (theme.viewed) {
-                            safePostMessage({
-                                id: theme.id,
-                                count: bg.favorites.count,
-                            });
-                        }
-                    })
-                    .catch(err => debugWarn('Error opening pinned theme:', err));
-                if (++count_TPAP >= SETTINGS.open_themes_limit) break;
-            }
-            break;
-
-    }
+const handleFavoritesPort = createFavoritesPortHandler({
+    getFavorites: () => bg.favorites.list,
+    getPinnedFavorites: () => bg.favorites.list_pin,
+    getCount: () => bg.favorites.count,
+    getOpenLimit: () => SETTINGS.open_themes_limit,
+    onError: error => debugWarn('Favorites port operation failed:', error),
 });
+chrome.runtime.onConnect.addListener(port => { handleFavoritesPort(port); });
 
 chrome.notifications.onClicked.addListener(notificationId => {
     const n_data = notificationId.split('/'),
